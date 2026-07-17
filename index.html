@@ -453,23 +453,22 @@
                 chip.className = "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer";
             });
         }
-
         // Processing Pipeline Sync Upload Sequences
         async function submitDataToGoogleSheets() {
             if (!currentScannedBook) return;
-
+        
             // Collect active form element variations values settings blocks
             currentScannedBook.uniqueId = selectedUniqueId;
             currentScannedBook.location = document.getElementById("input-location").value;
             currentScannedBook.status = document.getElementById("input-status").value;
             currentScannedBook.borrower = document.getElementById("input-borrower").value;
-
+        
             const selectedChips = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600"));
             currentScannedBook.tags = selectedChips.map(c => c.getAttribute("data-val")).join(", ");
-
+        
             bookResult.innerHTML = "";
             showStatus("Syncing row transaction references with Google Sheet engine...", "info");
-
+        
             try {
                 await fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
@@ -477,10 +476,16 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(currentScannedBook)
                 });
-
+        
                 showStatus(`Successfully synced configuration: "${currentScannedBook.title}"`, "success");
                 appendSessionHistoryLog(currentScannedBook);
+                
+                // --- THE FIX IS HERE ---
+                // Cleanly completely reset our global scanner tracking state 
+                // so the system is unlocked and ready to scan your next book immediately!
                 currentScannedBook = null;
+                resetScannerUIState(); 
+                
             } catch (err) {
                 showStatus(`Spreadsheet sync transmission dropped: ${err.message}`, "error");
             }
