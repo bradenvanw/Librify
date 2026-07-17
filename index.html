@@ -148,18 +148,19 @@
 
             html5QrcodeScanner = new Html5Qrcode("interactive-reader");
 
-            const config = {
-                fps: 12, 
-                qrbox: (videoWidth, videoHeight) => {
-                    const boxWidth = Math.min(videoWidth * 0.85, 320);
-                    const boxHeight = Math.min(videoHeight * 0.40, 140);
-                    return { width: boxWidth, height: boxHeight };
-                },
-                formatsToSupport: [ 
-                    Html5QrcodeSupportedFormats.EAN_13, 
-                    Html5QrcodeSupportedFormats.EAN_8 
-                ]
-            };
+        const config = {
+            fps: 15, // Slightly faster scanning cycle frames
+            qrbox: (videoWidth, videoHeight) => {
+                // Broadens the box horizontally to catch the entire book barcode easily
+                const boxWidth = Math.min(videoWidth * 0.90, 360);
+                const boxHeight = Math.min(videoHeight * 0.50, 180);
+                return { width: boxWidth, height: boxHeight };
+            },
+            formatsToSupport: [ 
+                Html5QrcodeSupportedFormats.EAN_13, 
+                Html5QrcodeSupportedFormats.EAN_8 
+            ]
+        };
 
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
