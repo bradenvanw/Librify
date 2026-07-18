@@ -55,10 +55,13 @@
                     <input type="text" id="isbn-input" placeholder="Enter 10 or 13-digit ISBN..." 
                         class="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all">
                 </div>
-                <button id="toggle-scan-btn" onclick="toggleScanner()" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2">
-                    <span>Open Scanner</span>
-                </button>
+                <!-- Swappable scan trigger button container -->
+                <div id="action-btn-container" class="flex gap-2">
+                    <button id="toggle-scan-btn" onclick="toggleScanner()" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
+                        <span>Open Scanner</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Interactive Camera Scanner Window -->
@@ -89,6 +92,7 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwm40P8tFwbe2iyRiPe3tRarSCi8d3f9RsVTdzVHyFfnIr0cecuPkzxSOs9OCawuc3eJw/exec";
         
         // DOM Element Cache References
+        const actionBtnContainer = document.getElementById("action-btn-container");
         const toggleScanBtn = document.getElementById("toggle-scan-btn");
         const scannerSection = document.getElementById("scanner-section");
         const statusLog = document.getElementById("status-log");
@@ -188,14 +192,61 @@
         
         function resetScannerUIState() {
             scannerSection.classList.add("hidden");
-            toggleScanBtn.innerText = "Open Scanner";
-            toggleScanBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2";
+            // Set button template back to default
+            actionBtnContainer.innerHTML = `
+                <button id="toggle-scan-btn" onclick="toggleScanner()" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
+                    <span>Open Scanner</span>
+                </button>
+            `;
         }
 
         function onScanSuccess(decodedText) {
             isbnInput.value = decodedText;
-            stopScanning();
-            checkExistingAndFetchMetadata(decodedText);
+            
+            // Cleanly stop the video hardware on success before moving forward
+            if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+                html5QrcodeScanner.stop().then(() => {
+                    renderScanNextButtonState();
+                    checkExistingAndFetchMetadata(decodedText);
+                }).catch(err => {
+                    console.error("Error stopping track loop:", err);
+                    renderScanNextButtonState();
+                    checkExistingAndFetchMetadata(decodedText);
+                });
+            } else {
+                renderScanNextButtonState();
+                checkExistingAndFetchMetadata(decodedText);
+            }
+        }
+
+        function renderScanNextButtonState() {
+            scannerSection.classList.add("hidden");
+            // Replace old controller layout with a dedicated reset action button
+            actionBtnContainer.innerHTML = `
+                <button id="scan-next-btn" onclick="prepareNextScanSession()" 
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap animate-pulse">
+                    ⚡ <span>Scan Next Book</span>
+                </button>
+            `;
+        }
+
+        function prepareNextScanSession() {
+            // Flush display state profiles
+            bookResult.innerHTML = "";
+            currentScannedBook = null;
+            isbnInput.value = "";
+            clearStatus();
+            
+            // Render the baseline scanner interface back in and spin up camera loop elements immediately
+            scannerSection.classList.remove("hidden");
+            actionBtnContainer.innerHTML = `
+                <button id="toggle-scan-btn" onclick="toggleScanner()" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
+                    <span>Close Scanner</span>
+                </button>
+            `;
+            startScanning();
         }
 
         async function checkExistingAndFetchMetadata(isbn) {
@@ -484,11 +535,13 @@
                 showStatus(`Successfully synced configuration: "${savedBookInstance.title}"`, "success");
                 appendSessionHistoryLog(savedBookInstance);
                 
-                // Clear the target panel area elements and release tracking models
-                bookResult.innerHTML = "";
+                // Keep the "Scan Next Book" action button highlighted up top so they can snap their next barcode
+                bookResult.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">
+                        🎉 Profile Synced! Tap <strong class="text-emerald-600">Scan Next Book</strong> up top to continue mapping your library collection.
+                    </div>
+                `;
                 currentScannedBook = null;
-                isbnInput.value = "";
-                resetScannerUIState(); 
                 
             } catch (err) {
                 showStatus(`Spreadsheet sync transmission dropped: ${err.message}`, "error");
