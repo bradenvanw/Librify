@@ -208,27 +208,34 @@
         }
 
         function onScanSuccess(decodedText) {
-            // If we're already viewing a book or loading one, ignore accidental double-scans
+            // Prevent accidental double-triggers if the UI is already processing
             if (scannerSection.classList.contains("hidden")) return;
             
             isbnInput.value = decodedText;
             
-            // 1. Instantly pause the scanner loop so it stops tracking video frames
+            // 1. Instantly stop the scanner to clear the library's internal cache memory
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-                html5QrcodeScanner.pause();
+                html5QrcodeScanner.stop().then(() => {
+                    console.log("Scanner engine stopped and memory flushed.");
+                    // Force-null the instance to guarantee a clean slate on the next startup
+                    html5QrcodeScanner = null; 
+                }).catch(err => {
+                    console.warn("Non-fatal scanner stop warning:", err);
+                    html5QrcodeScanner = null;
+                });
             }
             
-            // 2. Hide the video preview area visually, but KEEP the stream alive underneath
+            // 2. Hide the scanner section visually
             scannerSection.classList.add("hidden");
             
-            // 3. Render our green 'Scan Next' action button
+            // 3. Show the "Scan Next" button layout
             renderScanNextButtonState();
             
-            // 4. Pull your Google Sheet & OpenLibrary metadata records
+            // 4. Fire off your data lookups
             checkExistingAndFetchMetadata(decodedText);
         }
         
-      function renderScanNextButtonState() {
+        function renderScanNextButtonState() {
             actionBtnContainer.innerHTML = `
                 <button id="scan-next-btn" onclick="prepareNextScanSession()" 
                     class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
@@ -236,36 +243,27 @@
                 </button>
             `;
         }
-
+        
         function prepareNextScanSession() {
-            // 1. Flush display state text values
+            // 1. Clear out old UI fields and variables
             bookResult.innerHTML = "";
             currentScannedBook = null;
             isbnInput.value = "";
             clearStatus();
             
-            // 2. Swap back to the default header button templates
+            // 2. Bring back the standard menu button layout
             actionBtnContainer.innerHTML = `
                 <button id="toggle-scan-btn" onclick="toggleScanner()" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
                     <span>Close Scanner</span>
                 </button>
             `;
             
-            // 3. Make the scanner container frame visible again
+            // 3. Reveal the scanner container element
             scannerSection.classList.remove("hidden");
             
-            // 4. Safely tell the active camera to start processing video frames again
-            if (html5QrcodeScanner) {
-                try {
-                    html5QrcodeScanner.resume();
-                } catch (err) {
-                    console.warn("Scanner wasn't paused, attempting restart sequence:", err);
-                    startScanning();
-                }
-            } else {
-                startScanning();
-            }
+            // 4. Re-initialize a brand new scanner instance from scratch
+            startScanning();
         }
 
         async function checkExistingAndFetchMetadata(isbn) {
