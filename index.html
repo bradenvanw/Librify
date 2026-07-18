@@ -5,23 +5,31 @@
         // =========================================================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwm40P8tFwbe2iyRiPe3tRarSCi8d3f9RsVTdzVHyFfnIr0cecuPkzxSOs9OCawuc3eJw/exec";
         
-        // DOM Nodes Elements Scaffolding References
-        const toggleScanBtn = document.getElementById("toggle-scan-btn");
-        const scannerSection = document.getElementById("scanner-section");
-        const statusLog = document.getElementById("status-log");
-        const bookResult = document.getElementById("book-result");
-        const isbnInput = document.getElementById("isbn-input");
-        const historySection = document.getElementById("history-section");
-        const sessionLog = document.getElementById("session-log");
-
-        // Application State Managers
+        // Global Application State Managers
         let html5QrcodeScanner = null;
         let currentScannedBook = null;
         let activeCopiesData = [];
         let selectedUniqueId = "";
 
-       // Safe event hook that waits for the HTML element to actually exist
+        // Global DOM Scaffolding References (assigned safely on DOM load)
+        let toggleScanBtn, scannerSection, statusLog, bookResult, historySection, sessionLog;
+
+        // Safe event hook that waits for the HTML elements to actually exist
         document.addEventListener("DOMContentLoaded", () => {
+            // Assign DOM nodes safely once the browser has rendered the HTML
+            toggleScanBtn = document.getElementById("toggle-scan-btn");
+            scannerSection = document.getElementById("scanner-section");
+            statusLog = document.getElementById("status-log");
+            bookResult = document.getElementById("book-result");
+            historySection = document.getElementById("history-section");
+            sessionLog = document.getElementById("session-log");
+
+            // Attach click event to the scanner toggle button if it exists
+            if (toggleScanBtn) {
+                toggleScanBtn.addEventListener("click", toggleScanner);
+            }
+
+            // Attach keyup event to the manual input if it exists
             const inputElement = document.getElementById("isbn-input");
             if (inputElement) {
                 inputElement.addEventListener("keyup", function(event) {
@@ -38,6 +46,7 @@
         });
 
         function showStatus(message, type = "info") {
+            if (!statusLog) return;
             statusLog.className = "text-sm p-3 rounded-xl border font-medium text-center block";
             if (type === "error") {
                 statusLog.classList.add("bg-red-50", "border-red-200", "text-red-700");
@@ -50,13 +59,15 @@
         }
 
         function clearStatus() {
+            if (!statusLog) return;
             statusLog.innerText = "";
             statusLog.className = "hidden";
         }
 
         function toggleScanner() {
+            if (!scannerSection || !toggleScanBtn) return;
             if (scannerSection.classList.contains("hidden")) {
-                bookResult.innerHTML = ""; // Clear active forms on fresh scan
+                if (bookResult) bookResult.innerHTML = ""; // Clear active forms on fresh scan
                 scannerSection.classList.remove("hidden");
                 toggleScanBtn.innerText = "Close Scanner";
                 toggleScanBtn.classList.replace("bg-indigo-600", "bg-gray-600");
@@ -67,7 +78,7 @@
         }
 
         function startScanning() {
-            // CRITICAL FIX: Instantiate ONCE and reuse. Never destroy the container.
+            // Instantiate ONCE and reuse. Never destroy the container.
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5Qrcode("interactive-reader");
             }
@@ -113,9 +124,11 @@
         }
         
         function resetScannerUIState() {
-            scannerSection.classList.add("hidden");
-            toggleScanBtn.innerText = "Open Scanner";
-            toggleScanBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2";
+            if (scannerSection) scannerSection.classList.add("hidden");
+            if (toggleScanBtn) {
+                toggleScanBtn.innerText = "Open Scanner";
+                toggleScanBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2";
+            }
         }
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -134,12 +147,14 @@
         // Integrated Query Orchestrator & Multi-Copy Sync Parser
         async function checkExistingAndFetchMetadata(isbn) {
             clearStatus();
-            bookResult.innerHTML = `
-                <div class="flex items-center justify-center py-12">
-                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                    <span class="ml-3 text-sm text-gray-500">Syncing collection profiles...</span>
-                </div>
-            `;
+            if (bookResult) {
+                bookResult.innerHTML = `
+                    <div class="flex items-center justify-center py-12">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <span class="ml-3 text-sm text-gray-500">Syncing collection profiles...</span>
+                    </div>
+                `;
+            }
             
             const cleanIsbn = isbn.trim().replace(/[-\s]/g, "");
             
@@ -158,7 +173,7 @@
                 const bookKey = `ISBN:${cleanIsbn}`;
                 if (!data || !data[bookKey]) {
                     showStatus("No matching structural data log found for this ISBN barcode.", "error");
-                    bookResult.innerHTML = "";
+                    if (bookResult) bookResult.innerHTML = "";
                     if (html5QrcodeScanner) html5QrcodeScanner.resume();
                     return;
                 }
@@ -187,12 +202,13 @@
 
             } catch (err) {
                 showStatus(`System exceptions processing assets: ${err.message}`, "error");
-                bookResult.innerHTML = "";
+                if (bookResult) bookResult.innerHTML = "";
                 if (html5QrcodeScanner) html5QrcodeScanner.resume();
             }
         }
 
         function renderIntegratedLayout() {
+            if (!bookResult) return;
             bookResult.innerHTML = `
                 <!-- Master Meta Presentation Card -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row gap-6 items-start">
@@ -277,14 +293,16 @@
             const copyButtonsList = document.getElementById("copy-buttons-list");
             const copyBadgeIndicator = document.getElementById("copy-badge-indicator");
 
-            statusSelect.addEventListener("change", () => {
-                if (statusSelect.value === "Checked Out") {
-                    borrowerContainer.classList.remove("hidden");
-                } else {
-                    borrowerContainer.classList.add("hidden");
-                    borrowerInput.value = "";
-                }
-            });
+            if (statusSelect) {
+                statusSelect.addEventListener("change", () => {
+                    if (statusSelect.value === "Checked Out") {
+                        borrowerContainer.classList.remove("hidden");
+                    } else {
+                        borrowerContainer.classList.add("hidden");
+                        if (borrowerInput) borrowerInput.value = "";
+                    }
+                });
+            }
 
             document.querySelectorAll(".tag-chip").forEach(chip => {
                 chip.addEventListener("click", () => {
@@ -298,27 +316,29 @@
             });
 
             if (activeCopiesData.length > 0) {
-                activeCopiesData.forEach((copy, index) => {
-                    const btn = document.createElement("button");
-                    btn.type = "button";
-                    const statusEmoji = copy.status === "Checked Out" ? "🔴" : "🟢";
-                    btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white shadow-xs cursor-pointer transition-all";
-                    btn.innerText = `Copy ${index + 1} ${statusEmoji}`;
-                    btn.onclick = () => loadSelectedCopyProfile(index);
-                    copyButtonsList.appendChild(btn);
-                });
+                if (copyButtonsList) {
+                    activeCopiesData.forEach((copy, index) => {
+                        const btn = document.createElement("button");
+                        btn.type = "button";
+                        const statusEmoji = copy.status === "Checked Out" ? "🔴" : "🟢";
+                        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white shadow-xs cursor-pointer transition-all";
+                        btn.innerText = `Copy ${index + 1} ${statusEmoji}`;
+                        btn.onclick = () => loadSelectedCopyProfile(index);
+                        copyButtonsList.appendChild(btn);
+                    });
 
-                const addNewBtn = document.createElement("button");
-                addNewBtn.type = "button";
-                addNewBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-dashed border-indigo-400 text-indigo-600 bg-indigo-50/40 cursor-pointer hover:bg-indigo-50 transition-all";
-                addNewBtn.innerText = "+ Add Copy";
-                addNewBtn.onclick = () => createNewCopyInstanceProfile();
-                copyButtonsList.appendChild(addNewBtn);
+                    const addNewBtn = document.createElement("button");
+                    addNewBtn.type = "button";
+                    addNewBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-dashed border-indigo-400 text-indigo-600 bg-indigo-50/40 cursor-pointer hover:bg-indigo-50 transition-all";
+                    addNewBtn.innerText = "+ Add Copy";
+                    addNewBtn.onclick = () => createNewCopyInstanceProfile();
+                    copyButtonsList.appendChild(addNewBtn);
+                }
 
                 loadSelectedCopyProfile(0);
             } else {
                 selectedUniqueId = `${currentScannedBook.isbn}-1`;
-                copyBadgeIndicator.innerText = "Creating initial catalog log profile for this title (Copy 1)";
+                if (copyBadgeIndicator) copyBadgeIndicator.innerText = "Creating initial catalog log profile for this title (Copy 1)";
             }
         }
 
@@ -327,28 +347,34 @@
             const copy = activeCopiesData[index];
             selectedUniqueId = copy.uniqueId;
             
-            document.getElementById("copy-badge-indicator").innerText = `Modifying Active Asset Log Row Target: Copy ${index + 1} (${selectedUniqueId})`;
+            const copyBadgeIndicator = document.getElementById("copy-badge-indicator");
+            if (copyBadgeIndicator) {
+                copyBadgeIndicator.innerText = `Modifying Active Asset Log Row Target: Copy ${index + 1} (${selectedUniqueId})`;
+            }
             
-            const btnList = document.getElementById("copy-buttons-list").children;
-            Array.from(btnList).forEach((btn, idx) => {
-                if (idx === index) {
-                    btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer";
-                } else if (idx < activeCopiesData.length) {
-                    btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-xs cursor-pointer";
-                }
-            });
+            const copyButtonsList = document.getElementById("copy-buttons-list");
+            if (copyButtonsList) {
+                const btnList = copyButtonsList.children;
+                Array.from(btnList).forEach((btn, idx) => {
+                    if (idx === index) {
+                        btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer";
+                    } else if (idx < activeCopiesData.length) {
+                        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-xs cursor-pointer";
+                    }
+                });
+            }
 
-            document.getElementById("input-location").value = copy.location || "Living Room Main";
-            document.getElementById("input-status").value = copy.status || "Available";
+            if (document.getElementById("input-location")) document.getElementById("input-location").value = copy.location || "Living Room Main";
+            if (document.getElementById("input-status")) document.getElementById("input-status").value = copy.status || "Available";
             
             const borrowerContainer = document.getElementById("borrower-input-container");
             const borrowerInput = document.getElementById("input-borrower");
             if (copy.status === "Checked Out") {
-                borrowerContainer.classList.remove("hidden");
-                borrowerInput.value = copy.borrower || "";
+                if (borrowerContainer) borrowerContainer.classList.remove("hidden");
+                if (borrowerInput) borrowerInput.value = copy.borrower || "";
             } else {
-                borrowerContainer.classList.add("hidden");
-                borrowerInput.value = "";
+                if (borrowerContainer) borrowerContainer.classList.add("hidden");
+                if (borrowerInput) borrowerInput.value = "";
             }
 
             if (copy.tags) {
@@ -365,21 +391,28 @@
         function createNewCopyInstanceProfile() {
             const nextIdx = activeCopiesData.length + 1;
             selectedUniqueId = `${currentScannedBook.isbn}-${nextIdx}`;
-            document.getElementById("copy-badge-indicator").innerText = `Staging New Structural Record Target Variable: Copy ${nextIdx}`;
             
-            const btnList = document.getElementById("copy-buttons-list").children;
-            Array.from(btnList).forEach((btn, idx) => {
-                if (idx === activeCopiesData.length) {
-                    btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer";
-                } else {
-                    btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-xs cursor-pointer";
-                }
-            });
+            const copyBadgeIndicator = document.getElementById("copy-badge-indicator");
+            if (copyBadgeIndicator) {
+                copyBadgeIndicator.innerText = `Staging New Structural Record Target Variable: Copy ${nextIdx}`;
+            }
+            
+            const copyButtonsList = document.getElementById("copy-buttons-list");
+            if (copyButtonsList) {
+                const btnList = copyButtonsList.children;
+                Array.from(btnList).forEach((btn, idx) => {
+                    if (idx === activeCopiesData.length) {
+                        btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer";
+                    } else {
+                        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-xs cursor-pointer";
+                    }
+                });
+            }
 
-            document.getElementById("input-location").value = "Living Room Main";
-            document.getElementById("input-status").value = "Available";
-            document.getElementById("borrower-input-container").classList.add("hidden");
-            document.getElementById("input-borrower").value = "";
+            if (document.getElementById("input-location")) document.getElementById("input-location").value = "Living Room Main";
+            if (document.getElementById("input-status")) document.getElementById("input-status").value = "Available";
+            if (document.getElementById("borrower-input-container")) document.getElementById("borrower-input-container").classList.add("hidden");
+            if (document.getElementById("input-borrower")) document.getElementById("input-borrower").value = "";
             resetTagChipsUI();
         }
 
@@ -439,6 +472,7 @@
         }
         
         function appendSessionHistoryLog(book) {
+            if (!historySection || !sessionLog) return;
             historySection.classList.remove("hidden");
             const copyDisplayNum = book.uniqueId.split("-")[1] || "1";
             const statusLabel = book.status === "Checked Out" ? `<span class="text-[10px] bg-red-50 text-red-700 px-2 py-0.5 rounded-md font-semibold border border-red-100">Copy ${copyDisplayNum} Loaned to ${book.borrower}</span>` : `<span class="text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded-md font-semibold border border-green-100">Copy ${copyDisplayNum} Available</span>`;
