@@ -140,7 +140,13 @@
                 scannerSection.classList.remove("hidden");
                 toggleScanBtn.innerText = "Close Scanner";
                 toggleScanBtn.classList.replace("bg-indigo-600", "bg-gray-600");
-                startScanning();
+                
+                // If the scanner exists and is paused, resume it. Otherwise, start it raw.
+                if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+                    html5QrcodeScanner.resume();
+                } else {
+                    startScanning();
+                }
             } else {
                 stopScanning();
             }
