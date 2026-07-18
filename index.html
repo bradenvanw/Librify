@@ -64,10 +64,12 @@
                 </div>
             </div>
 
-            <!-- Interactive Camera Scanner Window -->
-            <div id="scanner-section" class="hidden border-2 border-dashed border-gray-200 rounded-2xl p-3 bg-gray-50 overflow-hidden transition-all duration-300">
-                <div id="interactive-reader" class="w-full mx-auto"></div>
-                <p class="text-center text-xs text-gray-400 mt-2">Center the book's linear barcode inside the highlighted rectangle box.</p>
+            <!-- Interactive Camera Scanner Window (Updated to use height/overflow wrapper) -->
+            <div id="scanner-section" class="max-h-0 opacity-0 overflow-hidden border-gray-200 rounded-2xl bg-gray-50 transition-all duration-300 ease-in-out">
+                <div class="p-3">
+                    <div id="interactive-reader" class="w-full mx-auto"></div>
+                    <p class="text-center text-xs text-gray-400 mt-2">Center the book's linear barcode inside the highlighted rectangle box.</p>
+                </div>
             </div>
 
             <!-- Status Log Messages -->
@@ -135,18 +137,17 @@
         }
 
         function toggleScanner() {
-            if (scannerSection.classList.contains("hidden")) {
+            // Check if the scanner window is currently collapsed
+            if (scannerSection.classList.contains("max-h-0")) {
                 bookResult.innerHTML = ""; 
-                scannerSection.classList.remove("hidden");
+                
+                // Open the container smoothly
+                scannerSection.classList.remove("max-h-0", "opacity-0", "border-none");
+                scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed");
+                
                 toggleScanBtn.innerText = "Close Scanner";
                 toggleScanBtn.classList.replace("bg-indigo-600", "bg-gray-600");
-                
-                // If the scanner exists and is paused, resume it. Otherwise, start it raw.
-                if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-                    html5QrcodeScanner.resume();
-                } else {
-                    startScanning();
-                }
+                startScanning();
             } else {
                 stopScanning();
             }
@@ -197,8 +198,10 @@
         }
         
         function resetScannerUIState() {
-            scannerSection.classList.add("hidden");
-            // Set button template back to default
+            // Collapse the container smoothly without using display: none
+            scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed");
+            scannerSection.classList.add("max-h-0", "opacity-0", "border-none");
+            
             actionBtnContainer.innerHTML = `
                 <button id="toggle-scan-btn" onclick="toggleScanner()" 
                     class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
@@ -208,31 +211,28 @@
         }
 
         function onScanSuccess(decodedText) {
-            // Prevent accidental double-triggers if the UI is already processing
-            if (scannerSection.classList.contains("hidden")) return;
-            
             isbnInput.value = decodedText;
             
-            // 1. Instantly stop the scanner to clear the library's internal cache memory
+            // Slide the scanner shut immediately so it stops registering frames visually
+            scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed");
+            scannerSection.classList.add("max-h-0", "opacity-0", "border-none");
+            
+            // Completely kill the instance to wipe the barcode history cache clean
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
                 html5QrcodeScanner.stop().then(() => {
-                    console.log("Scanner engine stopped and memory flushed.");
-                    // Force-null the instance to guarantee a clean slate on the next startup
                     html5QrcodeScanner = null; 
+                    renderScanNextButtonState();
+                    checkExistingAndFetchMetadata(decodedText);
                 }).catch(err => {
-                    console.warn("Non-fatal scanner stop warning:", err);
+                    console.warn("Scanner shutdown notice:", err);
                     html5QrcodeScanner = null;
+                    renderScanNextButtonState();
+                    checkExistingAndFetchMetadata(decodedText);
                 });
+            } else {
+                renderScanNextButtonState();
+                checkExistingAndFetchMetadata(decodedText);
             }
-            
-            // 2. Hide the scanner section visually
-            scannerSection.classList.add("hidden");
-            
-            // 3. Show the "Scan Next" button layout
-            renderScanNextButtonState();
-            
-            // 4. Fire off your data lookups
-            checkExistingAndFetchMetadata(decodedText);
         }
         
         function renderScanNextButtonState() {
@@ -245,13 +245,15 @@
         }
         
         function prepareNextScanSession() {
-            // 1. Clear out old UI fields and variables
             bookResult.innerHTML = "";
             currentScannedBook = null;
             isbnInput.value = "";
             clearStatus();
             
-            // 2. Bring back the standard menu button layout
+            // Expand the container out to full height smoothly
+            scannerSection.classList.remove("max-h-0", "opacity-0", "border-none");
+            scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed");
+            
             actionBtnContainer.innerHTML = `
                 <button id="toggle-scan-btn" onclick="toggleScanner()" 
                     class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
@@ -259,10 +261,7 @@
                 </button>
             `;
             
-            // 3. Reveal the scanner container element
-            scannerSection.classList.remove("hidden");
-            
-            // 4. Re-initialize a brand new scanner instance from scratch
+            // Build a perfectly fresh scanner object onto the unhidden element frame
             startScanning();
         }
 
