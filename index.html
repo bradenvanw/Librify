@@ -41,21 +41,50 @@
         <!-- Header -->
         <header class="text-center my-6">
             <h1 class="text-3xl font-extrabold text-indigo-600 tracking-tight">Librify</h1>
-            <p class="text-sm text-gray-500 mt-1">Scan a barcode, manage parameters, or search your collection</p>
+            <p class="text-sm text-gray-500 mt-1">Search your collection, scan a barcode, or manage parameters</p>
         </header>
 
-        <!-- Dynamic Navigation Tabs -->
+        <!-- Dynamic Navigation Tabs (Swapped Layout Order) -->
         <div class="flex bg-gray-200 p-1 rounded-xl mb-6">
-            <button id="tab-scan-mode" onclick="switchAppMode('scan')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer transition-all">
-                📷 Scanner & Log
-            </button>
-            <button id="tab-search-mode" onclick="switchAppMode('search')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all">
+            <button id="tab-search-mode" onclick="switchAppMode('search')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer transition-all">
                 🔍 Search Library
+            </button>
+            <button id="tab-scan-mode" onclick="switchAppMode('scan')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all">
+                📷 Scanner & Log
             </button>
         </div>
 
+        <!-- ================= SEARCH MODE VIEW (Now Default Tab) ================= -->
+        <div id="view-search-mode" class="space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+                <div class="flex gap-2">
+                    <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Type a book title or author..." 
+                        class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <button onclick="fetchAllBooksFromGoogleSheet()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1 whitespace-nowrap cursor-pointer">
+                        🔄 Refresh
+                    </button>
+                </div>
+                
+                <!-- Horizontal Scrolling Quick-Filter Pill Container -->
+                <div class="space-y-1.5">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center">
+                        <span>Quick Filters</span>
+                        <button id="clear-filter-link" onclick="selectQuickFilterPill(this, '')" class="hidden text-indigo-600 font-semibold lowercase hover:underline">Clear Filter</button>
+                    </div>
+                    <div id="quick-filter-pills-row" class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar select-none">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div id="search-status-message" class="text-xs text-gray-400 italic border-t border-gray-100 pt-2">Loading your library database...</div>
+            </div>
+
+            <!-- Scrollable Results Container -->
+            <div id="search-results-list" class="space-y-3"></div>
+        </div>
+
         <!-- ================= SCAN MODE VIEW ================= -->
-        <div id="view-scan-mode" class="space-y-4">
+        <div id="view-scan-mode" class="hidden space-y-4">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
                 <div class="flex flex-col sm:flex-row gap-3">
                     <div class="relative flex-grow">
@@ -110,35 +139,6 @@
             </div>
         </div>
 
-        <!-- ================= SEARCH MODE VIEW ================= -->
-        <div id="view-search-mode" class="hidden space-y-4">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
-                <div class="flex gap-2">
-                    <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Type a book title or author..." 
-                        class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                    <button onclick="fetchAllBooksFromGoogleSheet()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1 whitespace-nowrap cursor-pointer">
-                        🔄 Refresh
-                    </button>
-                </div>
-                
-                <!-- Horizontal Scrolling Quick-Filter Pill Container -->
-                <div class="space-y-1.5">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center">
-                        <span>Quick Filters</span>
-                        <button id="clear-filter-link" onclick="selectQuickFilterPill(this, '')" class="hidden text-indigo-600 font-semibold lowercase hover:underline">Clear Filter</button>
-                    </div>
-                    <div id="quick-filter-pills-row" class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar select-none">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <div id="search-status-message" class="text-xs text-gray-400 italic border-t border-gray-100 pt-2">Loading your library database...</div>
-            </div>
-
-            <!-- Scrollable Results Container -->
-            <div id="search-results-list" class="space-y-3"></div>
-        </div>
-
     </div>
 
     <script>
@@ -187,6 +187,7 @@
         renderLocationLibrarySettings();
         renderQuickFilterPillsModule();
         
+        // Initial setup kicks off directly into search mode view logic caching
         fetchAllBooksFromGoogleSheet();
 
         function switchAppMode(mode) {
@@ -272,21 +273,18 @@
             }
         }
 
-        // Combined Text & Category Filtering Logic
+        // Combined Text & Category Filtering Logic with Tweaked UI Info Card Metadata Display
         function filterLocalCatalogCache() {
             const query = searchQueryInput.value.toLowerCase().trim();
             const categoryFilter = activeSelectedCategoryFilter.toLowerCase();
             searchResultsList.innerHTML = "";
 
             const filtered = globalCatalogCache.filter(b => {
-                // 1. Category Pill Checking
                 if (categoryFilter !== "") {
                     const matchLoc = b.location && b.location.toLowerCase() === categoryFilter;
                     const matchTag = b.tags && b.tags.toLowerCase().split(", ").includes(categoryFilter);
                     if (!matchLoc && !matchTag) return false;
                 }
-
-                // 2. Text Search Checking
                 if (query === "") return true;
                 return (
                     (b.title && b.title.toLowerCase().includes(query)) ||
@@ -302,6 +300,14 @@
 
             filtered.forEach(book => {
                 const isCheckedOut = book.status === "Checked Out";
+                
+                // Isolate Year from PublishedDate safely
+                let displayYear = "N/A";
+                if (book.publishedDate) {
+                    const match = book.publishedDate.match(/\d{4}/);
+                    if (match) displayYear = match[0];
+                }
+
                 const card = document.createElement("div");
                 card.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-2xs flex gap-3 items-start text-left cursor-pointer hover:border-indigo-200 transition-colors";
                 
@@ -311,19 +317,36 @@
                     checkExistingAndFetchMetadata(book.isbn);
                 };
 
+                // Formulate tracking badge elements for contextual rows
+                const checkoutBadgeHTML = isCheckedOut 
+                    ? `<div class="text-[10px] text-red-700 bg-red-50 px-2 py-1 rounded-md font-medium border border-red-100 mt-1 flex justify-between items-center">
+                        <span>🗓️ Out: ${book.dateBorrowed || 'Date Missing'}</span>
+                        <span class="font-bold uppercase tracking-wide text-[8px] px-1 bg-red-200 rounded text-red-800">Checked Out</span>
+                       </div>`
+                    : '';
+
                 card.innerHTML = `
-                    <div class="w-12 h-18 bg-gray-50 border rounded-md overflow-hidden flex-shrink-0 shadow-2xs">
+                    <div class="w-14 h-20 bg-gray-50 border rounded-md overflow-hidden flex-shrink-0 shadow-2xs">
                         <img src="${book.thumbnail || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=100'}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=100'">
                     </div>
-                    <div class="flex-grow min-w-0 space-y-0.5">
-                        <h4 class="text-xs font-bold text-gray-900 truncate">${book.title || 'Untitled Book'}</h4>
-                        <p class="text-[11px] font-medium text-gray-500 truncate">by ${book.authors || 'Unknown Author'}</p>
-                        <div class="flex items-center justify-between pt-1.5 gap-2">
-                            <span class="text-[9px] bg-gray-100 font-semibold px-1.5 py-0.5 rounded text-gray-600 truncate max-w-[150px]">📍 ${book.location || 'Unassigned'}</span>
-                            <span class="text-[9px] font-bold ${isCheckedOut ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-green-50'} px-1.5 py-0.5 rounded flex-shrink-0">
-                                ${isCheckedOut ? 'Checked Out' : 'Available'}
-                            </span>
+                    <div class="flex-grow min-w-0 space-y-1">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-900 truncate leading-tight">${book.title || 'Untitled Book'}</h4>
+                            <p class="text-[11px] font-medium text-gray-500 truncate">by ${book.authors || 'Unknown Author'}</p>
                         </div>
+                        
+                        <!-- Premium Layout Inline Spec Indicators (Year & Page Counts Added) -->
+                        <div class="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                            <span>📅 ${displayYear}</span>
+                            <span>•</span>
+                            <span>📖 ${book.pageCount || 'N/A'} pgs</span>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1 gap-2">
+                            <span class="text-[9px] bg-gray-100 font-semibold px-1.5 py-0.5 rounded text-gray-600 truncate max-w-[160px]">📍 ${book.location || 'Unassigned'}</span>
+                            ${!isCheckedOut ? '<span class="text-[9px] font-bold text-emerald-600 bg-green-50 px-1.5 py-0.5 rounded flex-shrink-0">Available</span>' : ''}
+                        </div>
+                        ${checkoutBadgeHTML}
                     </div>
                 `;
                 searchResultsList.appendChild(card);
@@ -386,36 +409,33 @@
             clearStatus(); 
             bookResult.innerHTML = `<div class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div><span class="ml-3 text-sm text-gray-500">Searching catalog...</span></div>`; 
             
-            // ⚠️ PASTE YOUR COPIED GOOGLE API KEY HERE
-            const GOOGLE_BOOKS_API_KEY = "AIzaSyCPrABNnNk9KWMu5kS4cRc2DMPk3DGoNQI";
-        
+            const GOOGLE_BOOKS_API_KEY = ""; // Optional API Key definition spot if hitting blocks
             const cleanIsbn = isbn.trim().replace(/[^0-9X]/gi, ""); 
             if (!cleanIsbn || (cleanIsbn.length !== 10 && cleanIsbn.length !== 13)) {
                 showStatus("Invalid ISBN structure. Please input a valid 10 or 13-digit code.", "error");
                 bookResult.innerHTML = "";
                 return;
             }
-        
+
             // 1. Safe Google Sheets lookup with a strict 3-second timeout fallback
             activeCopiesData = [];
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
+
                 const lookupResponse = await fetch(`${GOOGLE_SCRIPT_URL}?isbn=${cleanIsbn}`, { signal: controller.signal }); 
                 clearTimeout(timeoutId);
-        
+
                 if (lookupResponse.ok) {
                     const lookupData = await lookupResponse.json(); 
                     activeCopiesData = lookupData.copies || []; 
                 }
             } catch(sheetErr) {
-                console.warn("Sheet verification timed out or was blocked. Proceeding directly to Google Books lookup.", sheetErr);
+                console.warn("Sheet verification timed out, using fallback direct query routes.", sheetErr);
             }
-        
-            // 2. Fetch data from Google Books API using your explicit API Key
+
+            // 2. Fetch data from Google Books API
             try { 
-                // We append the key parameter to prove you have your own personal quota
                 const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}${GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : ''}`;
                 const response = await fetch(url);
                 
@@ -432,7 +452,7 @@
                 } 
                 
                 const vol = searchResults.items[0].volumeInfo; 
-        
+
                 currentScannedBook = { 
                     isbn: cleanIsbn, 
                     title: vol.title || "Unknown Title", 
@@ -448,7 +468,7 @@
                     dimensions: vol.dimensions ? `H: ${vol.dimensions.height || '-'}, W: ${vol.dimensions.width || '-'}, T: ${vol.dimensions.thickness || '-'}` : "N/A",
                     dateBorrowed: ""
                 }; 
-        
+
                 showStatus("Book profile match successfully isolated!", "success"); 
                 renderIntegratedLayout(); 
             } catch (err) { 
@@ -479,25 +499,10 @@
         function prepareNextScanSession() { bookResult.innerHTML = ""; currentScannedBook = null; isbnInput.value = ""; clearStatus(); scannerSection.classList.remove("max-h-0", "opacity-0", "border-none"); scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); actionBtnContainer.innerHTML = `<button id="toggle-scan-btn" onclick="toggleScanner()" class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><span>Close Scanner</span></button>`; startScanning(); }
         function toggleChipState(c) { c.classList.toggle("bg-gray-50"); c.classList.toggle("text-gray-600"); c.classList.toggle("border-gray-200/80"); c.classList.toggle("bg-indigo-600"); c.classList.toggle("text-white"); c.classList.toggle("border-indigo-600"); if (c.classList.contains("bg-indigo-600")) c.innerText = `🏷️ ${c.getAttribute("data-val")}`; else c.innerText = `➕ ${c.getAttribute("data-val")}`; }
 
-        // Integrated Premium Layout Render Engine
         function renderIntegratedLayout() { 
-            const subtitleHTML = currentScannedBook.subtitle 
-                ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` 
-                : '';
-
-            const descriptionHTML = currentScannedBook.description 
-                ? `<div class="mt-3 pt-3 border-t border-gray-100">
-                    <span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span>
-                    <p class="text-xs text-gray-600 leading-relaxed">${currentScannedBook.description}</p>
-                   </div>`
-                : '';
-
-            const borrowedDateHTML = (currentScannedBook.status === "Checked Out" && currentScannedBook.dateBorrowed)
-                ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex justify-between items-center">
-                    <span class="font-medium">借 Tracking Borrow Date Out</span>
-                    <span class="font-mono font-bold">${currentScannedBook.dateBorrowed}</span>
-                   </div>`
-                : '';
+            const subtitleHTML = currentScannedBook.subtitle ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` : '';
+            const descriptionHTML = currentScannedBook.description ? `<div class="mt-3 pt-3 border-t border-gray-100"><span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span><p class="text-xs text-gray-600 leading-relaxed">${currentScannedBook.description}</p></div>` : '';
+            const borrowedDateHTML = (currentScannedBook.status === "Checked Out" && currentScannedBook.dateBorrowed) ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex justify-between items-center"><span class="font-medium">借 Tracking Borrow Date Out</span><span class="font-mono font-bold">${currentScannedBook.dateBorrowed}</span></div>` : '';
 
             bookResult.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
@@ -524,11 +529,7 @@
                             </div>
                             <div class="min-w-0">
                                 <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Published Date</span>
-                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.publishedDate || currentScannedBook.date || 'N/A'}</span>
-                            </div>
-                            <div class="min-w-0 col-span-2">
-                                <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Dimensions (H x W x T)</span>
-                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.dimensions || 'N/A'}</span>
+                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.publishedDate || 'N/A'}</span>
                             </div>
                         </div>
                         ${descriptionHTML}
@@ -623,7 +624,6 @@
             const c = activeCopiesData[i]; 
             selectedUniqueId = c.uniqueId; 
             
-            // Sync historical values back into standard object buffer if found
             currentScannedBook.dateBorrowed = c.dateBorrowed || "";
             currentScannedBook.status = c.status || "Available";
 
