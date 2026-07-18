@@ -659,11 +659,11 @@
 
         function renderIntegratedLayout() { 
             const subtitleHTML = currentScannedBook.subtitle ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` : '';
-            const descriptionHTML = currentScannedBook.description ? `<div class="mt-3 pt-3 border-t border-gray-100"><span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span><p class="text-xs text-gray-600 leading-relaxed">${currentScannedBook.description}</p></div>` : '';
+            const descriptionHTML = currentScannedBook.description ? `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-xs text-gray-600 leading-relaxed text-left"><span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span>${currentScannedBook.description}</div>` : '';
             const isCopyOverdue = currentScannedBook.status === "Checked Out" && checkItemOverdueStatus(currentScannedBook.dateBorrowed);
             const overdueBannerHTML = isCopyOverdue ? `<div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-xl text-xs font-bold text-center animate-pulse">⚠️ ATTENTION: Marked OVERDUE!</div>` : '';
             const borrowedDateHTML = (currentScannedBook.status === "Checked Out" && currentScannedBook.dateBorrowed) ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex justify-between items-center"><span class="font-medium">Tracking Borrow Date Out</span><span class="font-mono font-bold">${currentScannedBook.dateBorrowed}</span></div>` : '';
-
+        
             bookResult.innerHTML = `
                 ${overdueBannerHTML}
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
@@ -674,6 +674,9 @@
                         <div class="flex flex-wrap gap-1 mt-1"><span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">${currentScannedBook.genre}</span></div>
                     </div>
                 </div>
+                
+                <!-- Synopsis is now correctly injected back right here -->
+                ${descriptionHTML}
                 
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
                     ${borrowedDateHTML}
@@ -701,7 +704,7 @@
             `; 
             setupFormInteractions(); 
         }
-
+        
         function toggleBorrowerFieldVisibility() {
             const statusSelect = document.getElementById("input-status");
             const borrowerContainer = document.getElementById("borrower-input-container");
