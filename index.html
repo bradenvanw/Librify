@@ -264,7 +264,7 @@
                 const data = await resp.json();
                 
                 globalCatalogCache = data.books || [];
-                searchStatusMessage.innerText = `Database synchronized: ${globalCatalogCache.length} asset entries cached.`;
+                searchStatusMessage.innerText = `Database synchronized: ${globalCatalogCache.length} entries cached.`;
                 filterLocalCatalogCache();
             } catch(e) {
                 searchStatusMessage.innerText = "Error tracking database. Tap refresh to retry.";
@@ -300,7 +300,6 @@
                 return;
             }
 
-            // Corrected Layout Fields Order Mapping 
             filtered.forEach(book => {
                 const isCheckedOut = book.status === "Checked Out";
                 const card = document.createElement("div");
@@ -337,22 +336,19 @@
             
             const statusValue = document.getElementById("input-status").value;
             
-            // Assign structural modifications
             currentScannedBook.uniqueId = selectedUniqueId; 
             currentScannedBook.location = document.getElementById("input-location").value; 
             currentScannedBook.status = statusValue; 
             currentScannedBook.borrower = document.getElementById("input-borrower").value; 
             
-            // Manage Date Borrowed assignment engine
             if (statusValue === "Checked Out") {
-                // Generates clean local date stamp (e.g., 2026-07-18)
                 const today = new Date();
                 const yyyy = today.getFullYear();
                 const mm = String(today.getMonth() + 1).padStart(2, '0');
                 const dd = String(today.getDate()).padStart(2, '0');
                 currentScannedBook.dateBorrowed = `${yyyy}-${mm}-${dd}`;
             } else {
-                currentScannedBook.dateBorrowed = ""; // Wipe tracking variable on return
+                currentScannedBook.dateBorrowed = ""; 
             }
             
             const selectedChips = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600")); 
@@ -374,7 +370,7 @@
                     savedBookInstance.uniqueId = resData.uniqueId;
                 }
         
-                showStatus(`Successfully updated history configuration: "${savedBookInstance.title}"`, "success"); 
+                showStatus(`Successfully updated catalog: "${savedBookInstance.title}"`, "success"); 
                 appendSessionHistoryLog(savedBookInstance); 
                 fetchAllBooksFromGoogleSheet(); 
                 
@@ -393,47 +389,53 @@
         
             try { 
                 // 1. Check your Google Sheet first for duplicate copies
-                const lookupResponse = await fetch(`${GOOGLE_SCRIPT_URL}?isbn=${cleanIsbn}`); 
-                if (lookupResponse.ok) {
-                    const lookupData = await lookupResponse.json(); 
-                    activeCopiesData = lookupData.copies || []; 
+                try {
+                    const lookupResponse = await fetch(`${GOOGLE_SCRIPT_URL}?isbn=${cleanIsbn}`); 
+                    if (lookupResponse.ok) {
+                        const lookupData = await lookupResponse.json(); 
+                        activeCopiesData = lookupData.copies || []; 
+                    }
+                } catch(sheetErr) {
+                    console.warn("Sheet lookup skip/fallback context active:", sheetErr);
+                    activeCopiesData = [];
                 }
         
-                // 2. Fetch rich data from Google Books API
+                // 2. Fetch rich data from Google Books API safely via CORS proxy setup
                 const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`;
                 const response = await fetch(url);
-                if (!response.ok) throw new Error("Google Books connection failure.");
+                if (!response.ok) throw new Error("HTTP connection error status received.");
                 
                 const searchResults = await response.json();
                 
                 if (!searchResults.items || searchResults.items.length === 0) { 
-                    showStatus("No matching data found on Google Books.", "error"); 
+                    showStatus("No matching data found on Google Books database.", "error"); 
                     bookResult.innerHTML = ""; 
                     return; 
                 } 
                 
-                // Grab the closest match metadata profile
                 const vol = searchResults.items[0].volumeInfo; 
         
-                // Extract and format clean fields
+                // Map all premium items down into data object structures
                 currentScannedBook = { 
                     isbn: cleanIsbn, 
                     title: vol.title || "Unknown Title", 
+                    subtitle: vol.subtitle || "",
                     authors: vol.authors ? vol.authors.join(", ") : "Unknown Author", 
                     publisher: vol.publisher || "N/A", 
-                    date: vol.publishedDate || "N/A", 
+                    publishedDate: vol.publishedDate || "N/A", 
                     thumbnail: vol.imageLinks && vol.imageLinks.thumbnail ? vol.imageLinks.thumbnail.replace("http://", "https://") : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300', 
                     genre: vol.categories ? vol.categories[0] : "General Reading", 
-                    pages: vol.pageCount ? `${vol.pageCount} pgs` : "N/A",
-                    // EXTRA DATA POINT INJECTIONS:
-                    description: vol.description ? vol.description.substring(0, 200) + "..." : "No description available.",
-                    language: vol.language ? vol.language.toUpperCase() : "N/A"
+                    pageCount: vol.pageCount || "N/A",
+                    description: vol.description || "No description available.",
+                    language: vol.language ? vol.language.toUpperCase() : "N/A",
+                    dimensions: vol.dimensions ? `H: ${vol.dimensions.height || '-'}, W: ${vol.dimensions.width || '-'}, T: ${vol.dimensions.thickness || '-'}` : "N/A",
+                    dateBorrowed: ""
                 }; 
         
                 showStatus("Book profile match successfully isolated!", "success"); 
                 renderIntegratedLayout(); 
             } catch (err) { 
-                showStatus(`System exceptions: ${err.message}`, "error"); 
+                showStatus(`System Exceptions: Google Books lookup failure (${err.message})`, "error"); 
                 bookResult.innerHTML = ""; 
             } 
         }
@@ -458,12 +460,198 @@
         function onScanFailure(e) {}
         function renderScanNextButtonState() { actionBtnContainer.innerHTML = `<button id="scan-next-btn" onclick="prepareNextScanSession()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">⚡ <span>Scan Next Book</span></button>`; }
         function prepareNextScanSession() { bookResult.innerHTML = ""; currentScannedBook = null; isbnInput.value = ""; clearStatus(); scannerSection.classList.remove("max-h-0", "opacity-0", "border-none"); scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); actionBtnContainer.innerHTML = `<button id="toggle-scan-btn" onclick="toggleScanner()" class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><span>Close Scanner</span></button>`; startScanning(); }
-        
-        function renderIntegratedLayout() { bookResult.innerHTML = `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start"><div class="w-24 h-36 sm:w-32 sm:h-44 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-xs border border-gray-100"><img src="${currentScannedBook.thumbnail}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300'"></div><div class="space-y-1 sm:space-y-2 flex-grow min-w-0 text-left"><h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate sm:whitespace-normal">${currentScannedBook.title}</h2><p class="text-xs sm:text-sm font-medium text-indigo-600 truncate">by ${currentScannedBook.authors}</p><div class="flex gap-1.5 mt-1"><span class="text-[9px] sm:text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold truncate max-w-[120px]">${currentScannedBook.genre}</span><span class="text-[9px] sm:text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-semibold flex-shrink-0">${currentScannedBook.pages}</span></div><hr class="border-gray-100 my-2"><div class="grid grid-cols-2 gap-y-2 gap-x-2 text-[11px] text-gray-500"><div class="min-w-0"><span class="font-semibold text-gray-400 block text-[9px]">Publisher</span><span class="text-gray-700 font-medium block truncate">${currentScannedBook.publisher}</span></div><div class="min-w-0"><span class="font-semibold text-gray-400 block text-[9px]">Published</span><span class="text-gray-700 font-medium block truncate">${currentScannedBook.date}</span></div></div></div></div><div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4"><div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-2.5"><label class="block text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Select Tracking Copy Instance</label><div id="copy-buttons-list" class="flex flex-wrap gap-2"></div><div id="copy-badge-indicator" class="text-xs font-medium text-indigo-600/90 italic pt-0.5"></div></div><div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><label class="text-xs font-bold text-gray-600 uppercase tracking-wider">Availability Status</label><select id="input-status" class="bg-white border rounded-lg text-xs p-2 font-semibold"><option value="Available">🟢 Available</option><option value="Checked Out">🔴 Checked Out</option></select></div><div id="borrower-input-container" class="hidden space-y-1"><label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Borrower Identity Name</label><input type="text" id="input-borrower" placeholder="Enter name..." class="w-full bg-white border rounded-lg p-2.5 text-xs"></div></div><div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label><select id="input-location" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-medium"></select></div><div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label><div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div></div><button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer mt-2">Confirm & Sync Data Records</button></div>`; setupFormInteractions(); }
         function toggleChipState(c) { c.classList.toggle("bg-gray-50"); c.classList.toggle("text-gray-600"); c.classList.toggle("border-gray-200/80"); c.classList.toggle("bg-indigo-600"); c.classList.toggle("text-white"); c.classList.toggle("border-indigo-600"); if (c.classList.contains("bg-indigo-600")) c.innerText = `🏷️ ${c.getAttribute("data-val")}`; else c.innerText = `➕ ${c.getAttribute("data-val")}`; }
-        function setupFormInteractions() { const s = document.getElementById("input-status"); const bc = document.getElementById("borrower-input-container"); const bi = document.getElementById("input-borrower"); const cbl = document.getElementById("copy-buttons-list"); const cbi = document.getElementById("copy-badge-indicator"); s.addEventListener("change", () => { if (s.value === "Checked Out") bc.classList.remove("hidden"); else { bc.classList.add("hidden"); bi.value = ""; } }); refreshActiveFormLocationDropdown(); refreshActiveFormTagChips(); if (activeCopiesData.length > 0) { activeCopiesData.forEach((copy, idx) => { const btn = document.createElement("button"); btn.type = "button"; const em = copy.status === "Checked Out" ? "🔴" : "🟢"; btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white shadow-xs cursor-pointer"; btn.innerText = `Copy ${idx + 1} ${em}`; btn.onclick = () => loadSelectedCopyProfile(idx); cbl.appendChild(btn); }); const ab = document.createElement("button"); ab.type = "button"; ab.className = "px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-dashed border-indigo-400 text-indigo-600 bg-indigo-50/40 cursor-pointer"; ab.innerText = "+ Add Copy"; ab.onclick = () => createNewCopyInstanceProfile(); cbl.appendChild(ab); loadSelectedCopyProfile(0); } else { selectedUniqueId = `${currentScannedBook.isbn}-1`; cbi.innerText = "Creating initial profile (Copy 1)"; } }
-        function loadSelectedCopyProfile(i) { resetTagChipsUI(); const c = activeCopiesData[i]; selectedUniqueId = c.uniqueId; document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; const bl = document.getElementById("copy-buttons-list").children; Array.from(bl).forEach((b, idx) => { if (idx === i) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; else if (idx < activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-gray-700 shadow-xs cursor-pointer"; }); if (userLocations.includes(c.location)) document.getElementById("input-location").value = c.location; else if (userLocations.length > 0) document.getElementById("input-location").value = userLocations[0]; document.getElementById("input-status").value = c.status || "Available"; const bc = document.getElementById("borrower-input-container"); const bi = document.getElementById("input-borrower"); if (c.status === "Checked Out") { bc.classList.remove("hidden"); bi.value = c.borrower || ""; } else { bc.classList.add("hidden"); bi.value = ""; } if (c.tags) { c.tags.split(", ").forEach(ts => { document.querySelectorAll(".tag-chip").forEach(ch => { if (ch.getAttribute("data-val") === ts) { ch.className = "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; ch.innerText = `🏷️ ${ts}`; } }); }); } }
-        function createNewCopyInstanceProfile() { const ni = activeCopiesData.length + 1; selectedUniqueId = `${currentScannedBook.isbn}-ni`; document.getElementById("copy-badge-indicator").innerText = `Staging New: Copy ${ni}`; const bl = document.getElementById("copy-buttons-list").children; Array.from(bl).forEach((b, idx) => { if (idx === activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; else b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-gray-700 shadow-xs cursor-pointer"; }); if (userLocations.length > 0) document.getElementById("input-location").value = userLocations[0]; document.getElementById("input-status").value = "Available"; document.getElementById("borrower-input-container").classList.add("hidden"); document.getElementById("input-borrower").value = ""; resetTagChipsUI(); }
+
+        // Integrated Premium Layout Render Engine
+        function renderIntegratedLayout() { 
+            const subtitleHTML = currentScannedBook.subtitle 
+                ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` 
+                : '';
+
+            const descriptionHTML = currentScannedBook.description 
+                ? `<div class="mt-3 pt-3 border-t border-gray-100">
+                    <span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span>
+                    <p class="text-xs text-gray-600 leading-relaxed">${currentScannedBook.description}</p>
+                   </div>`
+                : '';
+
+            const borrowedDateHTML = (currentScannedBook.status === "Checked Out" && currentScannedBook.dateBorrowed)
+                ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex justify-between items-center">
+                    <span class="font-medium">借 Tracking Borrow Date Out</span>
+                    <span class="font-mono font-bold">${currentScannedBook.dateBorrowed}</span>
+                   </div>`
+                : '';
+
+            bookResult.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
+                    <div class="w-24 h-36 sm:w-32 sm:h-44 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-xs border border-gray-100">
+                        <img src="${currentScannedBook.thumbnail}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300'">
+                    </div>
+                    <div class="space-y-1 sm:space-y-2 flex-grow min-w-0 text-left">
+                        <h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate sm:whitespace-normal">${currentScannedBook.title}</h2>
+                        ${subtitleHTML}
+                        <p class="text-xs sm:text-sm font-medium text-indigo-600 truncate">by ${currentScannedBook.authors}</p>
+                        
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold truncate max-w-[120px]">${currentScannedBook.genre}</span>
+                            <span class="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-semibold">${currentScannedBook.pageCount || 'N/A'} pgs</span>
+                            <span class="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-semibold uppercase">${currentScannedBook.language || 'N/A'}</span>
+                        </div>
+                        
+                        <hr class="border-gray-100 my-2">
+                        
+                        <div class="grid grid-cols-2 gap-y-2 gap-x-3 text-[11px] text-gray-500">
+                            <div class="min-w-0">
+                                <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Publisher</span>
+                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.publisher}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Published Date</span>
+                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.publishedDate || currentScannedBook.date || 'N/A'}</span>
+                            </div>
+                            <div class="min-w-0 col-span-2">
+                                <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Dimensions (H x W x T)</span>
+                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.dimensions || 'N/A'}</span>
+                            </div>
+                        </div>
+                        ${descriptionHTML}
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+                    ${borrowedDateHTML}
+
+                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-2.5">
+                        <label class="block text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Select Tracking Copy Instance</label>
+                        <div id="copy-buttons-list" class="flex flex-wrap gap-2"></div>
+                        <div id="copy-badge-indicator" class="text-xs font-medium text-indigo-600/90 italic pt-0.5"></div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label class="text-xs font-bold text-gray-600 uppercase tracking-wider">Availability Status</label>
+                            <select id="input-status" class="bg-white border rounded-lg text-xs p-2 font-semibold" onchange="toggleBorrowerFieldVisibility()">
+                                <option value="Available">🟢 Available</option>
+                                <option value="Checked Out">🔴 Checked Out</option>
+                            </select>
+                        </div>
+                        <div id="borrower-input-container" class="hidden space-y-1">
+                            <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Borrower Identity Name</label>
+                            <input type="text" id="input-borrower" placeholder="Enter friend's name..." class="w-full bg-white border rounded-lg p-2.5 text-xs">
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label>
+                        <select id="input-location" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-medium"></select>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label>
+                        <div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                    
+                    <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer mt-2 transition-all">Confirm & Sync Data Records</button>
+                </div>
+            `; 
+            setupFormInteractions(); 
+        }
+
+        function toggleBorrowerFieldVisibility() {
+            const statusSelect = document.getElementById("input-status");
+            const borrowerContainer = document.getElementById("borrower-input-container");
+            if (statusSelect && borrowerContainer) {
+                if (statusSelect.value === "Checked Out") {
+                    borrowerContainer.classList.remove("hidden");
+                } else {
+                    borrowerContainer.classList.add("hidden");
+                    document.getElementById("input-borrower").value = ""; 
+                }
+            }
+        }
+
+        function setupFormInteractions() { 
+            const cbl = document.getElementById("copy-buttons-list"); 
+            const cbi = document.getElementById("copy-badge-indicator"); 
+            
+            refreshActiveFormLocationDropdown(); 
+            refreshActiveFormTagChips(); 
+            
+            if (activeCopiesData.length > 0) { 
+                activeCopiesData.forEach((copy, idx) => { 
+                    const btn = document.createElement("button"); 
+                    btn.type = "button"; 
+                    const em = copy.status === "Checked Out" ? "🔴" : "🟢"; 
+                    btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white shadow-xs cursor-pointer"; 
+                    btn.innerText = `Copy ${idx + 1} ${em}`; 
+                    btn.onclick = () => loadSelectedCopyProfile(idx); 
+                    cbl.appendChild(btn); 
+                }); 
+                const ab = document.createElement("button"); 
+                ab.type = "button"; 
+                ab.className = "px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-dashed border-indigo-400 text-indigo-600 bg-indigo-50/40 cursor-pointer"; 
+                ab.innerText = "+ Add Copy"; 
+                ab.onclick = () => createNewCopyInstanceProfile(); 
+                cbl.appendChild(ab); 
+                loadSelectedCopyProfile(0); 
+            } else { 
+                selectedUniqueId = `${currentScannedBook.isbn}-1`; 
+                cbi.innerText = "Creating initial profile (Copy 1)"; 
+            } 
+            toggleBorrowerFieldVisibility();
+        }
+
+        function loadSelectedCopyProfile(i) { 
+            resetTagChipsUI(); 
+            const c = activeCopiesData[i]; 
+            selectedUniqueId = c.uniqueId; 
+            
+            // Sync historical values back into standard object buffer if found
+            currentScannedBook.dateBorrowed = c.dateBorrowed || "";
+            currentScannedBook.status = c.status || "Available";
+
+            document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; 
+            const bl = document.getElementById("copy-buttons-list").children; 
+            Array.from(bl).forEach((b, idx) => { 
+                if (idx === i) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; 
+                else if (idx < activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-gray-700 shadow-xs cursor-pointer"; 
+            }); 
+            if (userLocations.includes(c.location)) document.getElementById("input-location").value = c.location; 
+            else if (userLocations.length > 0) document.getElementById("input-location").value = userLocations[0]; 
+            
+            document.getElementById("input-status").value = c.status || "Available"; 
+            document.getElementById("input-borrower").value = c.borrower || "";
+            
+            toggleBorrowerFieldVisibility();
+
+            if (c.tags) { 
+                c.tags.split(", ").forEach(ts => { 
+                    document.querySelectorAll(".tag-chip").forEach(ch => { 
+                        if (ch.getAttribute("data-val") === ts) { 
+                            ch.className = "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; 
+                            ch.innerText = `🏷️ ${ts}`; 
+                        } 
+                    }); 
+                }); 
+            } 
+        }
+
+        function createNewCopyInstanceProfile() { 
+            const ni = activeCopiesData.length + 1; 
+            selectedUniqueId = `${currentScannedBook.isbn}-ni`; 
+            document.getElementById("copy-badge-indicator").innerText = `Staging New: Copy ${ni}`; 
+            const bl = document.getElementById("copy-buttons-list").children; 
+            Array.from(bl).forEach((b, idx) => { 
+                if (idx === activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; 
+                else b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-gray-700 shadow-xs cursor-pointer"; 
+            }); 
+            if (userLocations.length > 0) document.getElementById("input-location").value = userLocations[0]; 
+            document.getElementById("input-status").value = "Available"; 
+            document.getElementById("input-borrower").value = ""; 
+            toggleBorrowerFieldVisibility();
+            resetTagChipsUI(); 
+        }
+
         function resetTagChipsUI() { document.querySelectorAll(".tag-chip").forEach(ch => { ch.className = "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; ch.innerText = `➕ ${ch.getAttribute("data-val")}`; }); }
         function appendSessionHistoryLog(b) { historySection.classList.remove("hidden"); const c = b.uniqueId.split("-")[1] || "1"; const sl = b.status === "Checked Out" ? `<span class="text-red-600 font-semibold">Checked Out</span>` : `<span class="text-emerald-600 font-semibold">Available</span>`; const li = document.createElement("div"); li.className = "bg-white border rounded-xl p-3 flex justify-between items-center text-xs shadow-xs"; li.innerHTML = `<div><p class="font-bold text-gray-800">${b.title}</p><p class="text-gray-400 mt-0.5">Copy ${c} • ${b.location}</p></div><div class="text-right">${sl}</div>`; sessionLog.prepend(li); }
     </script>
