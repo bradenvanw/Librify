@@ -55,26 +55,28 @@
                 <button onclick="toggleAppSettingsPanel('global-settings-hub')" class="text-gray-400 hover:text-gray-600 font-bold text-lg cursor-pointer">&times;</button>
             </div>
             
+            <p class="text-[11px] text-gray-400 italic">Toggle the checkboxes next to any parameter to pinpoint exactly which filters appear on your main search dashboard.</p>
+            
             <!-- Location Sub-Manager Component -->
             <div class="space-y-2">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">📍 Custom Storage Locations</h3>
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">📍 Custom Storage Locations</h3>
                 <div class="flex gap-2">
                     <input type="text" id="new-location-input" placeholder="e.g., Office Bookshelf..." class="flex-grow bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
                     <button onclick="addNewCustomUserLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer">Add</button>
                 </div>
-                <div id="location-library-list" class="flex flex-wrap gap-1.5 pt-1"></div>
+                <div id="location-library-list" class="flex flex-col gap-1.5 pt-1 max-h-32 overflow-y-auto pr-1"></div>
             </div>
 
             <hr class="border-gray-100">
 
             <!-- Tags Sub-Manager Component -->
             <div class="space-y-2">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">🏷️ Custom Collection Tags</h3>
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">🏷️ Custom Collection Tags</h3>
                 <div class="flex gap-2">
                     <input type="text" id="new-tag-input" placeholder="e.g., Sci-Fi Masterpieces..." class="flex-grow bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
                     <button onclick="addNewCustomUserTag()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer">Add</button>
                 </div>
-                <div id="tag-library-list" class="flex flex-wrap gap-1.5 pt-1"></div>
+                <div id="tag-library-list" class="flex flex-col gap-1.5 pt-1 max-h-32 overflow-y-auto pr-1"></div>
             </div>
         </div>
 
@@ -205,8 +207,12 @@
         let globalCatalogCache = []; 
         let activeSelectedCategoryFilter = ""; 
         
+        // Base structures
         let userTags = JSON.parse(localStorage.getItem("librify_tags")) || ["To Read", "Favorite", "Hardcover", "Borrowed"];
         let userLocations = JSON.parse(localStorage.getItem("librify_locations")) || ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"];
+        
+        // Filter preference states (matches item string arrays)
+        let visibleDashboardFilters = JSON.parse(localStorage.getItem("librify_visible_filters")) || [...userLocations, ...userTags];
 
         renderTagLibrarySettings();
         renderLocationLibrarySettings();
@@ -238,12 +244,14 @@
             quickFilterPillsRow.appendChild(allBtn);
 
             userLocations.forEach(loc => {
+                if (!visibleDashboardFilters.includes(loc)) return; // Skipped if hidden by settings check
                 const btn = createPillElement(`📍 ${loc}`, loc);
                 if (activeSelectedCategoryFilter === loc) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
             });
 
             userTags.forEach(tag => {
+                if (!visibleDashboardFilters.includes(tag)) return; // Skipped if hidden by settings check
                 const btn = createPillElement(`🏷️ ${tag}`, tag);
                 if (activeSelectedCategoryFilter === tag) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
@@ -273,6 +281,20 @@
                 clearFilterLink.classList.remove("hidden");
                 selectedPill.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
             }
+            filterLocalCatalogCache();
+        }
+
+        function toggleDashboardFilterVisibility(itemString, isChecked) {
+            if (isChecked) {
+                if (!visibleDashboardFilters.includes(itemString)) visibleDashboardFilters.push(itemString);
+            } else {
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== itemString);
+                if (activeSelectedCategoryFilter === itemString) {
+                    activeSelectedCategoryFilter = "";
+                }
+            }
+            localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            renderQuickFilterPillsModule();
             filterLocalCatalogCache();
         }
 
@@ -524,14 +546,102 @@
             if (el) el.classList.toggle("hidden"); 
         }
         
-        function renderLocationLibrarySettings() { locationLibraryList.innerHTML = ""; userLocations.forEach((l, i) => { const s = document.createElement("span"); s.className = "inline-flex items-center gap-1 bg-gray-50 border text-gray-700 text-xs px-2 py-1 rounded-md shadow-2xs font-medium"; s.innerHTML = `<span>📍 ${l}</span><button onclick="deleteCustomUserLocation(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-1 cursor-pointer">&times;</button>`; locationLibraryList.appendChild(s); }); localStorage.setItem("librify_locations", JSON.stringify(userLocations)); renderQuickFilterPillsModule(); }
-        function addNewCustomUserLocation() { const v = newLocationInput.value.trim(); if (v && !userLocations.includes(v)) { userLocations.push(v); newLocationInput.value = ""; renderLocationLibrarySettings(); if (currentScannedBook) refreshActiveFormLocationDropdown(); } }
-        function deleteCustomUserLocation(i) { userLocations.splice(i, 1); renderLocationLibrarySettings(); if (currentScannedBook) refreshActiveFormLocationDropdown(); }
-        function refreshActiveFormLocationDropdown() { const d = document.getElementById("input-location"); if (!d) return; const p = d.value; d.innerHTML = ""; userLocations.forEach(l => { const o = document.createElement("option"); o.value = l; o.innerText = l; d.appendChild(o); }); if (userLocations.includes(p)) d.value = p; }
+        // Location List Manager
+        function renderLocationLibrarySettings() { 
+            locationLibraryList.innerHTML = ""; 
+            userLocations.forEach((l, i) => { 
+                const isPinned = visibleDashboardFilters.includes(l);
+                const row = document.createElement("div"); 
+                row.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-medium"; 
+                row.innerHTML = `
+                    <label class="flex items-center gap-2 cursor-pointer flex-grow">
+                        <input type="checkbox" ${isPinned ? 'checked' : ''} onchange="toggleDashboardFilterVisibility('${l.replace(/'/g, "\\'")}', this.checked)" class="accent-indigo-600 rounded">
+                        <span>📍 ${l}</span>
+                    </label>
+                    <button onclick="deleteCustomUserLocation(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-2 cursor-pointer">&times;</button>
+                `; 
+                locationLibraryList.appendChild(row); 
+            }); 
+            localStorage.setItem("librify_locations", JSON.stringify(userLocations)); 
+            renderQuickFilterPillsModule(); 
+        }
         
-        function renderTagLibrarySettings() { tagLibraryList.innerHTML = ""; userTags.forEach((t, i) => { const s = document.createElement("span"); s.className = "inline-flex items-center gap-1 bg-gray-50 border text-gray-700 text-xs px-2 py-1 rounded-md shadow-2xs font-medium"; s.innerHTML = `<span>${t}</span><button onclick="deleteCustomUserTag(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-1 cursor-pointer">&times;</button>`; tagLibraryList.appendChild(s); }); localStorage.setItem("librify_tags", JSON.stringify(userTags)); renderQuickFilterPillsModule(); }
-        function addNewCustomUserTag() { const v = newTagInput.value.trim(); if (v && !userTags.includes(v)) { userTags.push(v); newTagInput.value = ""; renderTagLibrarySettings(); if (currentScannedBook) refreshActiveFormTagChips(); } }
-        function deleteCustomUserTag(i) { userTags.splice(i, 1); renderTagLibrarySettings(); if (currentScannedBook) refreshActiveFormTagChips(); }
+        function addNewCustomUserLocation() { 
+            const v = newLocationInput.value.trim(); 
+            if (v && !userLocations.includes(v)) { 
+                userLocations.push(v); 
+                visibleDashboardFilters.push(v); // Default pin it
+                localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+                newLocationInput.value = ""; 
+                renderLocationLibrarySettings(); 
+                if (currentScannedBook) refreshActiveFormLocationDropdown(); 
+            } 
+        }
+        
+        function deleteCustomUserLocation(i) { 
+            const removed = userLocations[i];
+            visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+            localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            userLocations.splice(i, 1); 
+            renderLocationLibrarySettings(); 
+            if (currentScannedBook) refreshActiveFormLocationDropdown(); 
+        }
+        
+        function refreshActiveFormLocationDropdown() { 
+            const d = document.getElementById("input-location"); 
+            if (!d) return; 
+            const p = d.value; 
+            d.innerHTML = ""; 
+            userLocations.forEach(l => { 
+                const o = document.createElement("option"); 
+                o.value = l; 
+                o.innerText = l; 
+                d.appendChild(o); 
+            }); 
+            if (userLocations.includes(p)) d.value = p; 
+        }
+        
+        // Tag List Manager
+        function renderTagLibrarySettings() { 
+            tagLibraryList.innerHTML = ""; 
+            userTags.forEach((t, i) => { 
+                const isPinned = visibleDashboardFilters.includes(t);
+                const row = document.createElement("div"); 
+                row.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-medium"; 
+                row.innerHTML = `
+                    <label class="flex items-center gap-2 cursor-pointer flex-grow">
+                        <input type="checkbox" ${isPinned ? 'checked' : ''} onchange="toggleDashboardFilterVisibility('${t.replace(/'/g, "\\'")}', this.checked)" class="accent-indigo-600 rounded">
+                        <span>🏷️ ${t}</span>
+                    </label>
+                    <button onclick="deleteCustomUserTag(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-2 cursor-pointer">&times;</button>
+                `; 
+                tagLibraryList.appendChild(row); 
+            }); 
+            localStorage.setItem("librify_tags", JSON.stringify(userTags)); 
+            renderQuickFilterPillsModule(); 
+        }
+        
+        function addNewCustomUserTag() { 
+            const v = newTagInput.value.trim(); 
+            if (v && !userTags.includes(v)) { 
+                userTags.push(v); 
+                visibleDashboardFilters.push(v); // Default pin it
+                localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+                newTagInput.value = ""; 
+                renderTagLibrarySettings(); 
+                if (currentScannedBook) refreshActiveFormTagChips(); 
+            } 
+        }
+        
+        function deleteCustomUserTag(i) { 
+            const removed = userTags[i];
+            visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+            localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            userTags.splice(i, 1); 
+            renderTagLibrarySettings(); 
+            if (currentScannedBook) refreshActiveFormTagChips(); 
+        }
+        
         function refreshActiveFormTagChips() { const c = document.getElementById("tag-chips-container"); if (!c) return; const a = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600")); const s = a.map(ch => ch.getAttribute("data-val")); c.innerHTML = ""; userTags.forEach(t => { const isS = s.includes(t); const b = document.createElement("button"); b.type = "button"; b.setAttribute("data-val", t); b.className = isS ? "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer" : "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; b.innerText = isS ? `🏷️ ${t}` : `➕ ${t}`; b.onclick = () => toggleChipState(b); c.appendChild(b); }); }
         
         function showStatus(m, t = "info") { statusLog.className = "text-sm p-3 rounded-xl border font-medium text-center block"; if (t === "error") statusLog.classList.add("bg-red-50", "border-red-200", "text-red-700"); else if (t === "success") statusLog.classList.add("bg-green-50", "border-green-200", "text-green-700"); else statusLog.classList.add("bg-blue-50", "border-blue-200", "text-blue-700"); statusLog.innerText = m; }
@@ -662,7 +772,7 @@
 
         function createNewCopyInstanceProfile() { 
             const ni = activeCopiesData.length + 1; 
-            selectedUniqueId = `${currentScannedBook.isbn}-${ni}`; 
+            selectedUniqueId = `${currentScannedBook.isbn}-ni`; 
             document.getElementById("copy-badge-indicator").innerText = `Staging New: Copy ${ni}`; 
             const bl = document.getElementById("copy-buttons-list").children; 
             Array.from(bl).forEach((b, idx) => { 
