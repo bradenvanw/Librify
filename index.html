@@ -386,30 +386,35 @@
                     activeCopiesData = lookupData.copies || []; 
                 }
         
-                // 2. Direct browser fetch to Open Library (the old way that worked!)
-                const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`;
-                const olResponse = await fetch(url);
-                if (!olResponse.ok) throw new Error("Open Library connection failure.");
+                // 2. Fetch rich data from Google Books API
+                const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Google Books connection failure.");
                 
-                const olData = await olResponse.json();
-                const vol = olData[`ISBN:${cleanIsbn}`]; 
-        
-                if (!vol) { 
-                    showStatus("No matching data found for this ISBN on Open Library.", "error"); 
+                const searchResults = await response.json();
+                
+                if (!searchResults.items || searchResults.items.length === 0) { 
+                    showStatus("No matching data found on Google Books.", "error"); 
                     bookResult.innerHTML = ""; 
                     return; 
                 } 
+                
+                // Grab the closest match metadata profile
+                const vol = searchResults.items[0].volumeInfo; 
         
-                // Map data fields to our layout profile
+                // Extract and format clean fields
                 currentScannedBook = { 
                     isbn: cleanIsbn, 
                     title: vol.title || "Unknown Title", 
-                    authors: vol.authors ? vol.authors.map(a => a.name).join(", ") : "Unknown Author", 
-                    publisher: vol.publishers ? vol.publishers.map(p => p.name).join(", ") : "N/A", 
-                    date: vol.publish_date || "N/A", 
-                    thumbnail: vol.cover && vol.cover.large ? vol.cover.large : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300', 
-                    genre: vol.subjects ? vol.subjects[0].name : "General Reading", 
-                    pages: vol.number_of_pages ? `${vol.number_of_pages} pgs` : "N/A" 
+                    authors: vol.authors ? vol.authors.join(", ") : "Unknown Author", 
+                    publisher: vol.publisher || "N/A", 
+                    date: vol.publishedDate || "N/A", 
+                    thumbnail: vol.imageLinks && vol.imageLinks.thumbnail ? vol.imageLinks.thumbnail.replace("http://", "https://") : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300', 
+                    genre: vol.categories ? vol.categories[0] : "General Reading", 
+                    pages: vol.pageCount ? `${vol.pageCount} pgs` : "N/A",
+                    // EXTRA DATA POINT INJECTIONS:
+                    description: vol.description ? vol.description.substring(0, 200) + "..." : "No description available.",
+                    language: vol.language ? vol.language.toUpperCase() : "N/A"
                 }; 
         
                 showStatus("Book profile match successfully isolated!", "success"); 
