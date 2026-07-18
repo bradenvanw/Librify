@@ -38,10 +38,47 @@
 
     <div class="max-w-xl mx-auto p-4 sm:p-6">
         <!-- Header -->
-        <header class="text-center my-6">
+        <header class="text-center my-6 relative">
             <h1 class="text-3xl font-extrabold text-indigo-600 tracking-tight">Librify</h1>
             <p class="text-sm text-gray-500 mt-1">Search your collection, scan a barcode, or manage parameters</p>
+            
+            <!-- Global Settings Toggle Button -->
+            <button onclick="toggleAppSettingsPanel('global-settings-hub')" class="absolute top-0 right-0 p-2 bg-white hover:bg-gray-100 rounded-xl border border-gray-200 shadow-2xs transition-colors cursor-pointer text-sm" title="Open Settings Menu">
+                ⚙️ <span class="hidden sm:inline font-semibold text-xs ml-1">Settings</span>
+            </button>
         </header>
+
+        <!-- ================= GLOBAL SETTINGS MENU HUB ================= -->
+        <div id="global-settings-hub" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-6 space-y-4 transition-all">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">⚙️ System Control Settings</h2>
+                <button onclick="toggleAppSettingsPanel('global-settings-hub')" class="text-gray-400 hover:text-gray-600 font-bold text-lg cursor-pointer">&times;</button>
+            </div>
+            
+            <p class="text-[11px] text-gray-400 italic">Toggle the checkboxes next to any parameter to pinpoint exactly which filters appear on your main search dashboard.</p>
+            
+            <!-- Location Sub-Manager Component -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">📍 Custom Storage Locations</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="new-location-input" placeholder="e.g., Office Bookshelf..." class="flex-grow bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <button onclick="addNewCustomUserLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer">Add</button>
+                </div>
+                <div id="location-library-list" class="flex flex-col gap-1.5 pt-1 max-h-32 overflow-y-auto pr-1"></div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Tags Sub-Manager Component -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">🏷️ Custom Collection Tags</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="new-tag-input" placeholder="e.g., Sci-Fi Masterpieces..." class="flex-grow bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <button onclick="addNewCustomUserTag()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer">Add</button>
+                </div>
+                <div id="tag-library-list" class="flex flex-col gap-1.5 pt-1 max-h-32 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
 
         <!-- Dynamic Navigation Tabs -->
         <div class="flex bg-gray-200 p-1 rounded-xl mb-6">
@@ -55,6 +92,26 @@
 
         <!-- ================= SEARCH MODE VIEW ================= -->
         <div id="view-search-mode" class="space-y-4">
+            <!-- Global Analytics Dashboard Component -->
+            <div id="analytics-dashboard-panel" class="grid grid-cols-4 gap-2 bg-white rounded-2xl p-4 shadow-2xs border border-gray-100 text-center">
+                <div class="p-1">
+                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Titles</span>
+                    <span id="stat-total-titles" class="text-lg font-black text-indigo-600">0</span>
+                </div>
+                <div class="p-1">
+                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Copies</span>
+                    <span id="stat-total-copies" class="text-lg font-black text-gray-700">0</span>
+                </div>
+                <div class="p-1">
+                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Available</span>
+                    <span id="stat-avail-rate" class="text-lg font-black text-emerald-600">0%</span>
+                </div>
+                <div class="p-1">
+                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Overdue</span>
+                    <span id="stat-overdue-count" class="text-lg font-black text-red-600">0</span>
+                </div>
+            </div>
+
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
                 <div class="flex gap-2">
                     <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Type a book title or author..." 
@@ -66,7 +123,7 @@
                 
                 <div class="space-y-1.5">
                     <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center">
-                        <span>Quick Filters</span>
+                        <span id="search-results-match-counter">Quick Filters</span>
                         <button id="clear-filter-link" onclick="selectQuickFilterPill(this, '')" class="hidden text-indigo-600 font-semibold lowercase hover:underline">Clear Filter</button>
                     </div>
                     <div id="quick-filter-pills-row" class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar select-none"></div>
@@ -102,28 +159,6 @@
                 </div>
 
                 <div id="status-log" class="hidden text-sm p-3 rounded-xl border font-medium text-center"></div>
-
-                <div class="pt-2 border-t border-gray-100 flex justify-end gap-4">
-                    <button onclick="toggleAppSettingsPanel('location-manager-panel')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer">
-                        📍 Manage Locations
-                    </button>
-                    <button onclick="toggleAppSettingsPanel('tag-manager-panel')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer">
-                        🏷️ Manage Tags
-                    </button>
-                </div>
-
-                <!-- Settings Panels -->
-                <div id="location-manager-panel" class="hidden bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Custom Locations</h3>
-                    <div class="flex gap-2"><input type="text" id="new-location-input" placeholder="e.g., Office..." class="flex-grow bg-white border border-gray-200 rounded-lg p-2 text-xs"><button onclick="addNewCustomUserLocation()" class="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-lg cursor-pointer">Add</button></div>
-                    <div id="location-library-list" class="flex flex-wrap gap-1.5 pt-1"></div>
-                </div>
-
-                <div id="tag-manager-panel" class="hidden bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Custom Tags</h3>
-                    <div class="flex gap-2"><input type="text" id="new-tag-input" placeholder="e.g., Sci-Fi..." class="flex-grow bg-white border border-gray-200 rounded-lg p-2 text-xs"><button onclick="addNewCustomUserTag()" class="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-lg cursor-pointer">Add</button></div>
-                    <div id="tag-library-list" class="flex flex-wrap gap-1.5 pt-1"></div>
-                </div>
             </div>
 
             <main id="book-result" class="mt-6 space-y-6"></main>
@@ -163,6 +198,7 @@
         const searchStatusMessage = document.getElementById("search-status-message");
         const quickFilterPillsRow = document.getElementById("quick-filter-pills-row");
         const clearFilterLink = document.getElementById("clear-filter-link");
+        const searchResultsMatchCounter = document.getElementById("search-results-match-counter");
 
         let html5QrcodeScanner = null;
         let currentScannedBook = null;
@@ -171,8 +207,12 @@
         let globalCatalogCache = []; 
         let activeSelectedCategoryFilter = ""; 
         
+        // Base structures
         let userTags = JSON.parse(localStorage.getItem("librify_tags")) || ["To Read", "Favorite", "Hardcover", "Borrowed"];
         let userLocations = JSON.parse(localStorage.getItem("librify_locations")) || ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"];
+        
+        // Filter preference states (matches item string arrays)
+        let visibleDashboardFilters = JSON.parse(localStorage.getItem("librify_visible_filters")) || [...userLocations, ...userTags];
 
         renderTagLibrarySettings();
         renderLocationLibrarySettings();
@@ -204,12 +244,14 @@
             quickFilterPillsRow.appendChild(allBtn);
 
             userLocations.forEach(loc => {
+                if (!visibleDashboardFilters.includes(loc)) return; // Skipped if hidden by settings check
                 const btn = createPillElement(`📍 ${loc}`, loc);
                 if (activeSelectedCategoryFilter === loc) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
             });
 
             userTags.forEach(tag => {
+                if (!visibleDashboardFilters.includes(tag)) return; // Skipped if hidden by settings check
                 const btn = createPillElement(`🏷️ ${tag}`, tag);
                 if (activeSelectedCategoryFilter === tag) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
@@ -242,47 +284,86 @@
             filterLocalCatalogCache();
         }
 
+        function toggleDashboardFilterVisibility(itemString, isChecked) {
+            if (isChecked) {
+                if (!visibleDashboardFilters.includes(itemString)) visibleDashboardFilters.push(itemString);
+            } else {
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== itemString);
+                if (activeSelectedCategoryFilter === itemString) {
+                    activeSelectedCategoryFilter = "";
+                }
+            }
+            localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            renderQuickFilterPillsModule();
+            filterLocalCatalogCache();
+        }
+
+        function checkItemOverdueStatus(dateString) {
+            if (!dateString) return false;
+            const borrowDate = new Date(dateString);
+            if (isNaN(borrowDate.getTime())) return false;
+            const diffTime = Math.abs(new Date() - borrowDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays > 14;
+        }
+
+        function runDatabaseAnalyticsEngine() {
+            if (!globalCatalogCache || globalCatalogCache.length === 0) {
+                updateAnalyticsDashboardUI(0, 0, 0, 0);
+                return;
+            }
+            
+            const totalCopies = globalCatalogCache.length;
+            const uniqueTitlesMap = new Set();
+            let availableCount = 0;
+            let overdueCount = 0;
+            
+            globalCatalogCache.forEach(b => {
+                if (b.title) uniqueTitlesMap.add(b.title.trim().toLowerCase());
+                if (b.status !== "Checked Out") {
+                    availableCount++;
+                } else if (b.dateBorrowed && checkItemOverdueStatus(b.dateBorrowed)) {
+                    overdueCount++;
+                }
+            });
+            
+            const totalTitles = uniqueTitlesMap.size;
+            const availRate = totalCopies > 0 ? Math.round((availableCount / totalCopies) * 100) : 0;
+            
+            updateAnalyticsDashboardUI(totalTitles, totalCopies, availRate, overdueCount);
+        }
+
+        function updateAnalyticsDashboardUI(titles, copies, rate, overdue) {
+            document.getElementById("stat-total-titles").innerText = titles;
+            document.getElementById("stat-total-copies").innerText = copies;
+            document.getElementById("stat-avail-rate").innerText = `${rate}%`;
+            document.getElementById("stat-overdue-count").innerText = overdue;
+        }
+
         async function fetchAllBooksFromGoogleSheet() {
             searchStatusMessage.innerHTML = "⏳ Syncing with live catalog database...";
             searchResultsList.innerHTML = `<div class="bg-white rounded-xl p-6 text-center text-xs text-gray-500 border border-gray-100">Attempting to connect to Google Sheets...</div>`;
             
             try {
-                // Added a cache-buster timestamp to force Google to give us the freshest sheet data
                 const cacheBuster = `&_cb=${new Date().getTime()}`;
                 const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll${cacheBuster}`);
-                
                 if (!resp.ok) throw new Error(`HTTP Error Status: ${resp.status}`);
-                
                 const data = await resp.json();
                 
                 if (!data || !data.books) {
                     searchStatusMessage.innerHTML = "⚠️ Script connected, but returned no 'books' array.";
-                    searchResultsList.innerHTML = `
-                        <div class="bg-amber-50 rounded-xl p-6 text-center border border-amber-200">
-                            <p class="text-xs font-bold text-amber-800">Empty Database or Column Mismatch</p>
-                            <p class="text-[11px] text-amber-600 mt-1">Make sure your Google Sheet columns match exactly and your Script is deployed as 'Anyone'.</p>
-                        </div>`;
+                    searchResultsList.innerHTML = `<div class="bg-amber-50 rounded-xl p-6 text-center border border-amber-200"><p class="text-xs font-bold text-amber-800">Empty Database</p></div>`;
+                    runDatabaseAnalyticsEngine();
                     return;
                 }
                 
                 globalCatalogCache = data.books;
                 searchStatusMessage.innerText = `✅ Database synchronized: ${globalCatalogCache.length} books loaded.`;
                 filterLocalCatalogCache();
-                
+                runDatabaseAnalyticsEngine();
             } catch(e) {
                 searchStatusMessage.innerHTML = "❌ Connection Failed.";
-                console.error("Librify Sync Error:", e);
-                
-                searchResultsList.innerHTML = `
-                    <div class="bg-red-50 rounded-xl p-6 text-left border border-red-100 space-y-2">
-                        <p class="text-xs font-bold text-red-800">Could not fetch your library data</p>
-                        <p class="text-[11px] text-red-600 leading-relaxed"><strong>Possible Cause:</strong> The Apps Script Web App URL might have changed, or the deployment isn't set to "Anyone" (it might be restricted to just you).</p>
-                        <div class="pt-2">
-                            <button onclick="fetchAllBooksFromGoogleSheet()" class="bg-red-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xs cursor-pointer">
-                                🔄 Retry Connection
-                            </button>
-                        </div>
-                    </div>`;
+                runDatabaseAnalyticsEngine();
             }
         }
         
@@ -305,6 +386,12 @@
                 );
             });
         
+            if (categoryFilter === "" && query === "") {
+                searchResultsMatchCounter.innerText = "Quick Filters";
+            } else {
+                searchResultsMatchCounter.innerText = `Found Filters (${filtered.length} matches)`;
+            }
+
             if (filtered.length === 0) {
                 searchResultsList.innerHTML = `<div class="bg-white rounded-xl p-6 text-center text-xs text-gray-400 border border-gray-100">No active book entries match your filters.</div>`;
                 return;
@@ -312,6 +399,7 @@
         
             filtered.forEach(book => {
                 const isCheckedOut = book.status === "Checked Out";
+                const isOverdue = isCheckedOut && checkItemOverdueStatus(book.dateBorrowed);
                 let displayYear = "N/A";
                 if (book.publishedDate) {
                     const match = book.publishedDate.toString().match(/\d{4}/);
@@ -319,18 +407,17 @@
                 }
         
                 const card = document.createElement("div");
-                card.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-2xs flex gap-3 items-start text-left cursor-pointer hover:border-indigo-200 transition-colors";
-                
+                card.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-2xs flex gap-3 items-start text-left cursor-pointer hover:border-indigo-200 transition-colors relative overflow-hidden";
+                if (isOverdue) card.classList.add("border-l-4", "border-l-red-500");
+
                 card.onclick = () => {
                     isbnInput.value = book.isbn;
                     checkExistingAndFetchMetadata(book.isbn, book);
                 };
         
+                const overdueBadge = isOverdue ? `<span class="bg-red-600 text-white text-[8px] font-black uppercase px-1 rounded tracking-wider animate-pulse">Overdue</span>` : '';
                 const checkoutBadgeHTML = isCheckedOut 
-                    ? `<div class="text-[10px] text-red-700 bg-red-50 px-2 py-1 rounded-md font-medium border border-red-100 mt-1 flex justify-between items-center">
-                        <span>🗓️ Out: ${book.dateBorrowed || 'Date Missing'}</span>
-                        <span class="font-bold uppercase tracking-wide text-[8px] px-1 bg-red-200 rounded text-red-800">Checked Out</span>
-                       </div>`
+                    ? `<div class="text-[10px] text-red-700 bg-red-50/70 px-2 py-1 rounded-md font-medium border border-red-100 mt-1 flex justify-between items-center gap-1"><span class="truncate">🗓️ Out to: <b>${book.borrower || 'Unknown'}</b></span><span class="flex items-center gap-1 shrink-0">${overdueBadge}<span class="font-bold uppercase tracking-wide text-[8px] px-1 bg-red-200 rounded text-red-800">Out</span></span></div>`
                     : '';
         
                 card.innerHTML = `
@@ -342,15 +429,8 @@
                             <h4 class="text-xs font-bold text-gray-900 truncate leading-tight">${book.title || 'Untitled Book'}</h4>
                             <p class="text-[11px] font-medium text-gray-500 truncate">by ${book.authors || 'Unknown Author'}</p>
                         </div>
-                        <div class="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
-                            <span>📅 ${displayYear}</span>
-                            <span>•</span>
-                            <span>📖 ${book.pageCount || 'N/A'} pgs</span>
-                        </div>
-                        <div class="flex items-center justify-between pt-1 gap-2">
-                            <span class="text-[9px] bg-gray-100 font-semibold px-1.5 py-0.5 rounded text-gray-600 truncate max-w-[160px]">📍 ${book.location || 'Unassigned'}</span>
-                            ${!isCheckedOut ? '<span class="text-[9px] font-bold text-emerald-600 bg-green-50 px-1.5 py-0.5 rounded flex-shrink-0">Available</span>' : ''}
-                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-gray-400 font-medium"><span>📅 ${displayYear}</span><span>•</span><span>📖 ${book.pageCount || 'N/A'} pgs</span></div>
+                        <div class="flex items-center justify-between pt-1 gap-2"><span class="text-[9px] bg-gray-100 font-semibold px-1.5 py-0.5 rounded text-gray-600 truncate max-w-[160px]">📍 ${book.location || 'Unassigned'}</span>${!isCheckedOut ? '<span class="text-[9px] font-bold text-emerald-600 bg-green-50 px-1.5 py-0.5 rounded flex-shrink-0">Available</span>' : ''}</div>
                         ${checkoutBadgeHTML}
                     </div>
                 `;
@@ -360,7 +440,6 @@
 
         async function submitDataToGoogleSheets() { 
             if (!currentScannedBook) return; 
-            
             const statusValue = document.getElementById("input-status").value;
             currentScannedBook.uniqueId = selectedUniqueId; 
             currentScannedBook.location = document.getElementById("input-location").value; 
@@ -368,11 +447,10 @@
             currentScannedBook.borrower = document.getElementById("input-borrower").value; 
             
             if (statusValue === "Checked Out") {
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                currentScannedBook.dateBorrowed = `${yyyy}-${mm}-${dd}`;
+                if(!currentScannedBook.dateBorrowed) {
+                    const today = new Date();
+                    currentScannedBook.dateBorrowed = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                }
             } else {
                 currentScannedBook.dateBorrowed = ""; 
             }
@@ -382,7 +460,7 @@
             
             const savedBookInstance = { ...currentScannedBook }; 
             bookResult.innerHTML = `<div class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>`; 
-            showStatus("Syncing records and logging transactions...", "info"); 
+            showStatus("Syncing records...", "info"); 
             
             try { 
                 const response = await fetch(GOOGLE_SCRIPT_URL, { 
@@ -391,15 +469,11 @@
                     body: JSON.stringify(savedBookInstance) 
                 }); 
                 const resData = await response.json();
-                
-                if (resData.uniqueId) {
-                    savedBookInstance.uniqueId = resData.uniqueId;
-                }
+                if (resData.uniqueId) savedBookInstance.uniqueId = resData.uniqueId;
         
                 showStatus(`Successfully updated catalog: "${savedBookInstance.title}"`, "success"); 
                 appendSessionHistoryLog(savedBookInstance); 
                 fetchAllBooksFromGoogleSheet(); 
-                
                 bookResult.innerHTML = `<div class="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">🎉 Profile Synced!</div>`; 
                 currentScannedBook = null; 
             } catch (err) { 
@@ -410,21 +484,16 @@
 
         async function checkExistingAndFetchMetadata(isbn, cachedBookData = null) { 
             clearStatus(); 
-            
-            // Force interface state redirection instantly
             switchAppMode('scan');
+            bookResult.innerHTML = `<div class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>`; 
             
-            bookResult.innerHTML = `<div class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div><span class="ml-3 text-sm text-gray-500">Searching networks...</span></div>`; 
-            
-            // Sanitize the barcode: strip hyphens, spaces, and filter characters
             const cleanIsbn = isbn.toString().trim().replace(/[^0-9X]/gi, ""); 
             if (!cleanIsbn || (cleanIsbn.length !== 10 && cleanIsbn.length !== 13)) {
-                showStatus("Invalid ISBN structure. Please input a valid 10 or 13-digit code.", "error");
+                showStatus("Invalid ISBN structure.", "error");
                 bookResult.innerHTML = "";
                 return;
             }
         
-            // 1. Map existing sheet details immediately if cached
             activeCopiesData = [];
             if (cachedBookData) {
                 activeCopiesData = globalCatalogCache.filter(b => b.isbn === cleanIsbn);
@@ -435,129 +504,152 @@
                         const lookupData = await lookupResponse.json(); 
                         activeCopiesData = lookupData.copies || []; 
                     }
-                } catch(sheetErr) {
-                    console.warn("Spreadsheet check skipped or timed out.", sheetErr);
-                }
+                } catch(e) {}
             }
         
-            // 2. Query Metadata Databases
             try { 
-                // Core Attempt: Google Books API API (with lowercased q=isbn: structure)
                 const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&printType=books&key=${GOOGLE_BOOKS_API_KEY}`;
                 const response = await fetch(googleUrl);
                 const searchResults = await response.json();
                 
                 if (searchResults.items && searchResults.items.length > 0) { 
                     const vol = searchResults.items[0].volumeInfo; 
-            
                     currentScannedBook = { 
-                        isbn: cleanIsbn, 
-                        title: vol.title || "Unknown Title", 
-                        subtitle: vol.subtitle || "",
-                        authors: vol.authors ? vol.authors.join(", ") : "Unknown Author", 
-                        publisher: vol.publisher || "N/A", 
-                        publishedDate: vol.publishedDate || "N/A", 
-                        thumbnail: vol.imageLinks && vol.imageLinks.thumbnail ? vol.imageLinks.thumbnail.replace("http://", "https://") : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300', 
-                        genre: vol.categories ? vol.categories[0] : "General Reading", 
-                        pageCount: vol.pageCount || "N/A",
-                        description: vol.description || "No description available.",
-                        language: vol.language ? vol.language.toUpperCase() : "N/A",
-                        dimensions: vol.dimensions ? `H: ${vol.dimensions.height || '-'}, W: ${vol.dimensions.width || '-'}, T: ${vol.dimensions.thickness || '-'}` : "N/A",
-                        dateBorrowed: ""
+                        isbn: cleanIsbn, title: vol.title || "Unknown Title", subtitle: vol.subtitle || "",
+                        authors: vol.authors ? vol.authors.join(", ") : "Unknown Author", publisher: vol.publisher || "N/A", 
+                        publishedDate: vol.publishedDate || "N/A", thumbnail: vol.imageLinks && vol.imageLinks.thumbnail ? vol.imageLinks.thumbnail.replace("http://", "https://") : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300', 
+                        genre: vol.categories ? vol.categories[0] : "General Reading", pageCount: vol.pageCount || "N/A",
+                        description: vol.description || "No description available.", language: vol.language ? vol.language.toUpperCase() : "N/A", dimensions: "N/A", dateBorrowed: ""
                     }; 
-            
-                    showStatus("Book profile match successfully isolated!", "success"); 
+                    showStatus("Book profile matched!", "success"); 
                     renderIntegratedLayout(); 
                     return;
                 } 
                 
-                // Fallback Attempt: Open Library Data API Network
-                console.warn("Google Books returned empty. Querying Open Library backup API...");
-                const openLibraryUrl = `https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`;
-                const olResponse = await fetch(openLibraryUrl);
-                const olData = await olResponse.json();
-                const olKey = `ISBN:${cleanIsbn}`;
-                
-                if (olData && olData[olKey]) {
-                    const bookInfo = olData[olKey];
-                    let displayCover = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300';
-                    if (bookInfo.cover && bookInfo.cover.medium) {
-                        displayCover = bookInfo.cover.medium.replace("http://", "https://");
-                    }
-                    
-                    currentScannedBook = {
-                        isbn: cleanIsbn,
-                        title: bookInfo.title || "Unknown Title",
-                        subtitle: bookInfo.subtitle || "",
-                        authors: bookInfo.authors ? bookInfo.authors.map(a => a.name).join(", ") : "Unknown Author",
-                        publisher: bookInfo.publishers ? bookInfo.publishers.map(p => p.name).join(", ") : "N/A",
-                        publishedDate: bookInfo.publish_date || "N/A",
-                        thumbnail: displayCover,
-                        genre: bookInfo.subjects ? bookInfo.subjects[0].name : "General Reading",
-                        pageCount: bookInfo.number_of_pages || "N/A",
-                        description: bookInfo.notes || "No description available summary.",
-                        language: "N/A",
-                        dimensions: "N/A",
-                        dateBorrowed: ""
-                    };
-                    
-                    showStatus("Book details pulled from Open Library fallback network!", "success");
-                    renderIntegratedLayout();
-                    return;
-                }
-                
-                // Final Check: Check if we have it locally cached if external services both failed
-                if (cachedBookData) {
-                    currentScannedBook = {
-                        isbn: cleanIsbn,
-                        title: cachedBookData.title || "Unknown Title",
-                        subtitle: cachedBookData.subtitle || "",
-                        authors: cachedBookData.authors || "Unknown Author",
-                        publisher: cachedBookData.publisher || "N/A",
-                        publishedDate: cachedBookData.publishedDate || "N/A",
-                        thumbnail: cachedBookData.thumbnail || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300',
-                        genre: cachedBookData.genre || "General Reading",
-                        pageCount: cachedBookData.pageCount || "N/A",
-                        description: cachedBookData.description || "No description available.",
-                        language: cachedBookData.language || "N/A",
-                        dimensions: cachedBookData.dimensions || "N/A",
-                        dateBorrowed: cachedBookData.dateBorrowed || ""
-                    };
-                    showStatus("Loaded details successfully from local library cache!", "success");
-                    renderIntegratedLayout();
-                    return;
-                }
-                
-                showStatus(`No matching data found for ISBN: ${cleanIsbn} on Google Books or Open Library.`, "error"); 
-                bookResult.innerHTML = ""; 
-                
-            } catch (err) { 
                 if (cachedBookData) {
                     currentScannedBook = { ...cachedBookData };
-                    showStatus("Loaded profile from database cache (APIs Offline).", "success");
+                    showStatus("Loaded details from cache.", "success");
                     renderIntegratedLayout();
-                } else {
-                    showStatus(`System Network Exception: ${err.message}`, "error"); 
-                    bookResult.innerHTML = ""; 
+                    return;
                 }
+                showStatus(`No data found for ISBN: ${cleanIsbn}`, "error"); 
+                bookResult.innerHTML = ""; 
+            } catch (err) { 
+                bookResult.innerHTML = ""; 
             } 
         }
         
         isbnInput.addEventListener("keyup", function(e) { if (e.key === "Enter") { const q = isbnInput.value.trim().replace(/[-\s]/g, ""); if (q) checkExistingAndFetchMetadata(q); } });
-        function toggleAppSettingsPanel(id) { const targets = ['location-manager-panel', 'tag-manager-panel']; targets.forEach(t => { const el = document.getElementById(t); if (t === id) el.classList.toggle("hidden"); else el.classList.add("hidden"); }); }
-        function renderLocationLibrarySettings() { locationLibraryList.innerHTML = ""; userLocations.forEach((l, i) => { const s = document.createElement("span"); s.className = "inline-flex items-center gap-1 bg-white border text-gray-700 text-xs px-2 py-1 rounded-md shadow-xs font-medium"; s.innerHTML = `<span>📍 ${l}</span><button onclick="deleteCustomUserLocation(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-1 cursor-pointer">&times;</button>`; locationLibraryList.appendChild(s); }); localStorage.setItem("librify_locations", JSON.stringify(userLocations)); }
-        function addNewCustomUserLocation() { const v = newLocationInput.value.trim(); if (v && !userLocations.includes(v)) { userLocations.push(v); newLocationInput.value = ""; renderLocationLibrarySettings(); if (currentScannedBook) refreshActiveFormLocationDropdown(); } }
-        function deleteCustomUserLocation(i) { userLocations.splice(i, 1); renderLocationLibrarySettings(); if (currentScannedBook) refreshActiveFormLocationDropdown(); }
-        function refreshActiveFormLocationDropdown() { const d = document.getElementById("input-location"); if (!d) return; const p = d.value; d.innerHTML = ""; userLocations.forEach(l => { const o = document.createElement("option"); o.value = l; o.innerText = l; d.appendChild(o); }); if (userLocations.includes(p)) d.value = p; }
-        function renderTagLibrarySettings() { tagLibraryList.innerHTML = ""; userTags.forEach((t, i) => { const s = document.createElement("span"); s.className = "inline-flex items-center gap-1 bg-white border text-gray-700 text-xs px-2 py-1 rounded-md shadow-xs font-medium"; s.innerHTML = `<span>${t}</span><button onclick="deleteCustomUserTag(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-1 cursor-pointer">&times;</button>`; tagLibraryList.appendChild(s); }); localStorage.setItem("librify_tags", JSON.stringify(userTags)); }
-        function addNewCustomUserTag() { const v = newTagInput.value.trim(); if (v && !userTags.includes(v)) { userTags.push(v); newTagInput.value = ""; renderTagLibrarySettings(); if (currentScannedBook) refreshActiveFormTagChips(); } }
-        function deleteCustomUserTag(i) { userTags.splice(i, 1); renderTagLibrarySettings(); if (currentScannedBook) refreshActiveFormTagChips(); }
+        
+        function toggleAppSettingsPanel(id) { 
+            const el = document.getElementById(id); 
+            if (el) el.classList.toggle("hidden"); 
+        }
+        
+        // Location List Manager
+        function renderLocationLibrarySettings() { 
+            locationLibraryList.innerHTML = ""; 
+            userLocations.forEach((l, i) => { 
+                const isPinned = visibleDashboardFilters.includes(l);
+                const row = document.createElement("div"); 
+                row.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-medium"; 
+                row.innerHTML = `
+                    <label class="flex items-center gap-2 cursor-pointer flex-grow">
+                        <input type="checkbox" ${isPinned ? 'checked' : ''} onchange="toggleDashboardFilterVisibility('${l.replace(/'/g, "\\'")}', this.checked)" class="accent-indigo-600 rounded">
+                        <span>📍 ${l}</span>
+                    </label>
+                    <button onclick="deleteCustomUserLocation(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-2 cursor-pointer">&times;</button>
+                `; 
+                locationLibraryList.appendChild(row); 
+            }); 
+            localStorage.setItem("librify_locations", JSON.stringify(userLocations)); 
+            renderQuickFilterPillsModule(); 
+        }
+        
+        function addNewCustomUserLocation() { 
+            const v = newLocationInput.value.trim(); 
+            if (v && !userLocations.includes(v)) { 
+                userLocations.push(v); 
+                visibleDashboardFilters.push(v); // Default pin it
+                localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+                newLocationInput.value = ""; 
+                renderLocationLibrarySettings(); 
+                if (currentScannedBook) refreshActiveFormLocationDropdown(); 
+            } 
+        }
+        
+        function deleteCustomUserLocation(i) { 
+            const removed = userLocations[i];
+            visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+            localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            userLocations.splice(i, 1); 
+            renderLocationLibrarySettings(); 
+            if (currentScannedBook) refreshActiveFormLocationDropdown(); 
+        }
+        
+        function refreshActiveFormLocationDropdown() { 
+            const d = document.getElementById("input-location"); 
+            if (!d) return; 
+            const p = d.value; 
+            d.innerHTML = ""; 
+            userLocations.forEach(l => { 
+                const o = document.createElement("option"); 
+                o.value = l; 
+                o.innerText = l; 
+                d.appendChild(o); 
+            }); 
+            if (userLocations.includes(p)) d.value = p; 
+        }
+        
+        // Tag List Manager
+        function renderTagLibrarySettings() { 
+            tagLibraryList.innerHTML = ""; 
+            userTags.forEach((t, i) => { 
+                const isPinned = visibleDashboardFilters.includes(t);
+                const row = document.createElement("div"); 
+                row.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-medium"; 
+                row.innerHTML = `
+                    <label class="flex items-center gap-2 cursor-pointer flex-grow">
+                        <input type="checkbox" ${isPinned ? 'checked' : ''} onchange="toggleDashboardFilterVisibility('${t.replace(/'/g, "\\'")}', this.checked)" class="accent-indigo-600 rounded">
+                        <span>🏷️ ${t}</span>
+                    </label>
+                    <button onclick="deleteCustomUserTag(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-2 cursor-pointer">&times;</button>
+                `; 
+                tagLibraryList.appendChild(row); 
+            }); 
+            localStorage.setItem("librify_tags", JSON.stringify(userTags)); 
+            renderQuickFilterPillsModule(); 
+        }
+        
+        function addNewCustomUserTag() { 
+            const v = newTagInput.value.trim(); 
+            if (v && !userTags.includes(v)) { 
+                userTags.push(v); 
+                visibleDashboardFilters.push(v); // Default pin it
+                localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+                newTagInput.value = ""; 
+                renderTagLibrarySettings(); 
+                if (currentScannedBook) refreshActiveFormTagChips(); 
+            } 
+        }
+        
+        function deleteCustomUserTag(i) { 
+            const removed = userTags[i];
+            visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+            localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            userTags.splice(i, 1); 
+            renderTagLibrarySettings(); 
+            if (currentScannedBook) refreshActiveFormTagChips(); 
+        }
+        
         function refreshActiveFormTagChips() { const c = document.getElementById("tag-chips-container"); if (!c) return; const a = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600")); const s = a.map(ch => ch.getAttribute("data-val")); c.innerHTML = ""; userTags.forEach(t => { const isS = s.includes(t); const b = document.createElement("button"); b.type = "button"; b.setAttribute("data-val", t); b.className = isS ? "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer" : "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; b.innerText = isS ? `🏷️ ${t}` : `➕ ${t}`; b.onclick = () => toggleChipState(b); c.appendChild(b); }); }
+        
         function showStatus(m, t = "info") { statusLog.className = "text-sm p-3 rounded-xl border font-medium text-center block"; if (t === "error") statusLog.classList.add("bg-red-50", "border-red-200", "text-red-700"); else if (t === "success") statusLog.classList.add("bg-green-50", "border-green-200", "text-green-700"); else statusLog.classList.add("bg-blue-50", "border-blue-200", "text-blue-700"); statusLog.innerText = m; }
         function clearStatus() { statusLog.innerText = ""; statusLog.className = "hidden"; }
+        
         function toggleScanner() { if (scannerSection.classList.contains("max-h-0")) { bookResult.innerHTML = ""; scannerSection.classList.remove("max-h-0", "opacity-0", "border-none"); scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); toggleScanBtn.innerText = "Close Scanner"; toggleScanBtn.classList.replace("bg-indigo-600", "bg-gray-600"); startScanning(); } else { stopScanning(); } }
-        function startScanning() { const re = document.getElementById("interactive-reader"); if (re) re.innerHTML = ""; html5QrcodeScanner = new Html5Qrcode("interactive-reader"); const config = { fps: 10, qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; }, formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.ISBN_13 ] }; html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure).catch(err => { console.error(err); showStatus("Camera failure.", "error"); }); }
-        function stopScanning() { if (html5QrcodeScanner && html5QrcodeScanner.isScanning) { html5QrcodeScanner.stop().then(() => { resetScannerUIState(); }).catch(err => { resetScannerUIState(); }); } else { resetScannerUIState(); } }
+        function startScanning() { const re = document.getElementById("interactive-reader"); if (re) re.innerHTML = ""; html5QrcodeScanner = new Html5Qrcode("interactive-reader"); const config = { fps: 10, qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; }, formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.ISBN_13 ] }; html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure).catch(err => { showStatus("Camera failure.", "error"); }); }
+        function stopScanning() { if (html5QrcodeScanner && html5QrcodeScanner.isScanning) { html5QrcodeScanner.stop().then(() => { resetScannerUIState(); }).catch(() => { resetScannerUIState(); }); } else { resetScannerUIState(); } }
         function resetScannerUIState() { scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); scannerSection.classList.add("max-h-0", "opacity-0", "border-none"); actionBtnContainer.innerHTML = `<button id="toggle-scan-btn" onclick="toggleScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><span>Open Scanner</span></button>`; }
         function onScanSuccess(dt) { if (scannerSection.classList.contains("max-h-0")) return; isbnInput.value = dt; scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); scannerSection.classList.add("max-h-0", "opacity-0", "border-none"); if (html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; renderScanNextButtonState(); checkExistingAndFetchMetadata(dt); }).catch(() => { html5QrcodeScanner = null; renderScanNextButtonState(); checkExistingAndFetchMetadata(dt); }); } else { renderScanNextButtonState(); checkExistingAndFetchMetadata(dt); } }
         function onScanFailure(e) {}
@@ -568,43 +660,23 @@
         function renderIntegratedLayout() { 
             const subtitleHTML = currentScannedBook.subtitle ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` : '';
             const descriptionHTML = currentScannedBook.description ? `<div class="mt-3 pt-3 border-t border-gray-100"><span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span><p class="text-xs text-gray-600 leading-relaxed">${currentScannedBook.description}</p></div>` : '';
+            const isCopyOverdue = currentScannedBook.status === "Checked Out" && checkItemOverdueStatus(currentScannedBook.dateBorrowed);
+            const overdueBannerHTML = isCopyOverdue ? `<div class="bg-red-50 border border-red-200 text-red-800 p-3 rounded-xl text-xs font-bold text-center animate-pulse">⚠️ ATTENTION: Marked OVERDUE!</div>` : '';
             const borrowedDateHTML = (currentScannedBook.status === "Checked Out" && currentScannedBook.dateBorrowed) ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex justify-between items-center"><span class="font-medium">Tracking Borrow Date Out</span><span class="font-mono font-bold">${currentScannedBook.dateBorrowed}</span></div>` : '';
 
             bookResult.innerHTML = `
+                ${overdueBannerHTML}
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
-                    <div class="w-24 h-36 sm:w-32 sm:h-44 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-xs border border-gray-100">
-                        <img src="${currentScannedBook.thumbnail}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=300'">
-                    </div>
+                    <div class="w-24 h-36 sm:w-32 sm:h-44 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-xs border border-gray-100"><img src="${currentScannedBook.thumbnail}" class="w-full h-full object-cover"></div>
                     <div class="space-y-1 sm:space-y-2 flex-grow min-w-0 text-left">
-                        <h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate sm:whitespace-normal">${currentScannedBook.title}</h2>
-                        ${subtitleHTML}
+                        <h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate">${currentScannedBook.title}</h2>${subtitleHTML}
                         <p class="text-xs sm:text-sm font-medium text-indigo-600 truncate">by ${currentScannedBook.authors}</p>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            <span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold truncate max-w-[120px]">${currentScannedBook.genre}</span>
-                            <span class="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-semibold">${currentScannedBook.pageCount || 'N/A'} pgs</span>
-                            <span class="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-semibold uppercase">${currentScannedBook.language || 'N/A'}</span>
-                        </div>
-                        
-                        <hr class="border-gray-100 my-2">
-                        
-                        <div class="grid grid-cols-2 gap-y-2 gap-x-3 text-[11px] text-gray-500">
-                            <div class="min-w-0">
-                                <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Publisher</span>
-                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.publisher}</span>
-                            </div>
-                            <div class="min-w-0">
-                                <span class="font-semibold text-gray-400 block text-[9px] uppercase tracking-wider">Published Date</span>
-                                <span class="text-gray-700 font-medium block truncate">${currentScannedBook.publishedDate || 'N/A'}</span>
-                            </div>
-                        </div>
-                        ${descriptionHTML}
+                        <div class="flex flex-wrap gap-1 mt-1"><span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">${currentScannedBook.genre}</span></div>
                     </div>
                 </div>
                 
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
                     ${borrowedDateHTML}
-
                     <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-2.5">
                         <label class="block text-[11px] font-bold text-indigo-800 uppercase tracking-wider">Select Tracking Copy Instance</label>
                         <div id="copy-buttons-list" class="flex flex-wrap gap-2"></div>
@@ -615,26 +687,15 @@
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <label class="text-xs font-bold text-gray-600 uppercase tracking-wider">Availability Status</label>
                             <select id="input-status" class="bg-white border rounded-lg text-xs p-2 font-semibold" onchange="toggleBorrowerFieldVisibility()">
-                                <option value="Available">🟢 Available</option>
+                                <option value="Available">🟢 Available / Return</option>
                                 <option value="Checked Out">🔴 Checked Out</option>
                             </select>
                         </div>
-                        <div id="borrower-input-container" class="hidden space-y-1">
-                            <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Borrower Identity Name</label>
-                            <input type="text" id="input-borrower" placeholder="Enter friend's name..." class="w-full bg-white border rounded-lg p-2.5 text-xs">
-                        </div>
+                        <div id="borrower-input-container" class="hidden space-y-1"><input type="text" id="input-borrower" placeholder="Enter friend's name..." class="w-full bg-white border rounded-lg p-2.5 text-xs"></div>
                     </div>
                     
-                    <div class="space-y-1">
-                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label>
-                        <select id="input-location" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-medium"></select>
-                    </div>
-                    
-                    <div class="space-y-1">
-                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label>
-                        <div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div>
-                    </div>
-                    
+                    <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label><select id="input-location" class="w-full bg-gray-50 border rounded-lg p-2.5 text-xs font-medium"></select></div>
+                    <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label><div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div></div>
                     <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer mt-2 transition-all">Confirm & Sync Data Records</button>
                 </div>
             `; 
@@ -645,29 +706,23 @@
             const statusSelect = document.getElementById("input-status");
             const borrowerContainer = document.getElementById("borrower-input-container");
             if (statusSelect && borrowerContainer) {
-                if (statusSelect.value === "Checked Out") {
-                    borrowerContainer.classList.remove("hidden");
-                } else {
-                    borrowerContainer.classList.add("hidden");
-                    document.getElementById("input-borrower").value = ""; 
-                }
+                if (statusSelect.value === "Checked Out") borrowerContainer.classList.remove("hidden");
+                else { borrowerContainer.classList.add("hidden"); document.getElementById("input-borrower").value = ""; }
             }
         }
 
         function setupFormInteractions() { 
-            const cbl = document.getElementById("copy-buttons-list"); 
-            const cbi = document.getElementById("copy-badge-indicator"); 
-            
             refreshActiveFormLocationDropdown(); 
             refreshActiveFormTagChips(); 
+            const cbl = document.getElementById("copy-buttons-list"); 
+            const cbi = document.getElementById("copy-badge-indicator"); 
             
             if (activeCopiesData.length > 0) { 
                 activeCopiesData.forEach((copy, idx) => { 
                     const btn = document.createElement("button"); 
                     btn.type = "button"; 
-                    const em = copy.status === "Checked Out" ? "🔴" : "🟢"; 
                     btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white shadow-xs cursor-pointer"; 
-                    btn.innerText = `Copy ${idx + 1} ${em}`; 
+                    btn.innerText = `Copy ${idx + 1} ${copy.status === "Checked Out" ? "🔴" : "🟢"}`; 
                     btn.onclick = () => loadSelectedCopyProfile(idx); 
                     cbl.appendChild(btn); 
                 }); 
@@ -689,22 +744,18 @@
             resetTagChipsUI(); 
             const c = activeCopiesData[i]; 
             selectedUniqueId = c.uniqueId; 
-            
             currentScannedBook.dateBorrowed = c.dateBorrowed || "";
             currentScannedBook.status = c.status || "Available";
-
             document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; 
+            
             const bl = document.getElementById("copy-buttons-list").children; 
             Array.from(bl).forEach((b, idx) => { 
                 if (idx === i) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; 
                 else if (idx < activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-gray-700 shadow-xs cursor-pointer"; 
             }); 
             if (userLocations.includes(c.location)) document.getElementById("input-location").value = c.location; 
-            else if (userLocations.length > 0) document.getElementById("input-location").value = userLocations[0]; 
-            
             document.getElementById("input-status").value = c.status || "Available"; 
             document.getElementById("input-borrower").value = c.borrower || "";
-            
             toggleBorrowerFieldVisibility();
 
             if (c.tags) { 
@@ -721,22 +772,22 @@
 
         function createNewCopyInstanceProfile() { 
             const ni = activeCopiesData.length + 1; 
-            selectedUniqueId = `${currentScannedBook.isbn}-${ni}`; 
+            selectedUniqueId = `${currentScannedBook.isbn}-ni`; 
             document.getElementById("copy-badge-indicator").innerText = `Staging New: Copy ${ni}`; 
             const bl = document.getElementById("copy-buttons-list").children; 
             Array.from(bl).forEach((b, idx) => { 
                 if (idx === activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; 
                 else b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-gray-700 shadow-xs cursor-pointer"; 
             }); 
-            if (userLocations.length > 0) document.getElementById("input-location").value = userLocations[0]; 
             document.getElementById("input-status").value = "Available"; 
             document.getElementById("input-borrower").value = ""; 
+            currentScannedBook.dateBorrowed = "";
             toggleBorrowerFieldVisibility();
             resetTagChipsUI(); 
         }
 
         function resetTagChipsUI() { document.querySelectorAll(".tag-chip").forEach(ch => { ch.className = "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; ch.innerText = `➕ ${ch.getAttribute("data-val")}`; }); }
-        function appendSessionHistoryLog(b) { historySection.classList.remove("hidden"); const c = b.uniqueId.split("-")[1] || "1"; const sl = b.status === "Checked Out" ? `<span class="text-red-600 font-semibold">Checked Out</span>` : `<span class="text-emerald-600 font-semibold">Available</span>`; const li = document.createElement("div"); li.className = "bg-white border rounded-xl p-3 flex justify-between items-center text-xs shadow-xs"; li.innerHTML = `<div><p class="font-bold text-gray-800">${b.title}</p><p class="text-gray-400 mt-0.5">Copy ${c} • ${b.location}</p></div><div class="text-right">${sl}</div>`; sessionLog.prepend(li); }
+        function appendSessionHistoryLog(b) { historySection.classList.remove("hidden"); const c = b.uniqueId.split("-")[1] || "1"; const sl = b.status === "Checked Out" ? `<span class="text-red-600 font-semibold">Out</span>` : `<span class="text-emerald-600 font-semibold">Available</span>`; const li = document.createElement("div"); li.className = "bg-white border rounded-xl p-3 flex justify-between items-center text-xs shadow-xs"; li.innerHTML = `<div><p class="font-bold text-gray-800">${b.title}</p></div><div>${sl}</div>`; sessionLog.prepend(li); }
     </script>
 </body>
 </html>
