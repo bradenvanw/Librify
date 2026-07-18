@@ -30,6 +30,9 @@
             justify-content: center !important;
             overflow: hidden !important;
         }
+        /* Hides scrollbars for a clean mobile pill-row appearance */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-12">
@@ -107,17 +110,29 @@
             </div>
         </div>
 
-        <!-- ================= NEW: SEARCH MODE VIEW ================= -->
+        <!-- ================= SEARCH MODE VIEW ================= -->
         <div id="view-search-mode" class="hidden space-y-4">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
                 <div class="flex gap-2">
-                    <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Search title, author, tag, or location..." 
+                    <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Type a book title or author..." 
                         class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                     <button onclick="fetchAllBooksFromGoogleSheet()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1 whitespace-nowrap cursor-pointer">
                         🔄 Refresh
                     </button>
                 </div>
-                <div id="search-status-message" class="text-xs text-gray-400 italic">Loading your library database...</div>
+                
+                <!-- NEW: Horizontal Scrolling Quick-Filter Pill Container -->
+                <div class="space-y-1.5">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center">
+                        <span>Quick Filters</span>
+                        <button id="clear-filter-link" onclick="selectQuickFilterPill(this, '')" class="hidden text-indigo-600 font-semibold lowercase hover:underline">Clear Filter</button>
+                    </div>
+                    <div id="quick-filter-pills-row" class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar select-none">
+                        <!-- Populated dynamically via engine -->
+                    </div>
+                </div>
+
+                <div id="search-status-message" class="text-xs text-gray-400 italic border-t border-gray-100 pt-2">Loading your library database...</div>
             </div>
 
             <!-- Scrollable Results Container -->
@@ -153,24 +168,26 @@
         const searchResultsList = document.getElementById("search-results-list");
         const searchQueryInput = document.getElementById("library-search-query");
         const searchStatusMessage = document.getElementById("search-status-message");
+        const quickFilterPillsRow = document.getElementById("quick-filter-pills-row");
+        const clearFilterLink = document.getElementById("clear-filter-link");
 
         // State Engines
         let html5QrcodeScanner = null;
         let currentScannedBook = null;
         let activeCopiesData = [];
         let selectedUniqueId = "";
-        let globalCatalogCache = []; // Stores complete list of spreadsheet books
+        let globalCatalogCache = []; 
+        let activeSelectedCategoryFilter = ""; // Tracking variable for currently tapped pill filter
         
         let userTags = JSON.parse(localStorage.getItem("librify_tags")) || ["To Read", "Favorite", "Hardcover", "Borrowed"];
         let userLocations = JSON.parse(localStorage.getItem("librify_locations")) || ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"];
 
         renderTagLibrarySettings();
         renderLocationLibrarySettings();
+        renderQuickFilterPillsModule();
         
-        // Background load catalog cache instantly on launch
         fetchAllBooksFromGoogleSheet();
 
-        // Mode Switching Engine Routine
         function switchAppMode(mode) {
             if (mode === 'scan') {
                 viewScanMode.classList.remove("hidden");
@@ -183,15 +200,70 @@
                 viewSearchMode.classList.remove("hidden");
                 tabScanMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer";
                 tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer";
+                // Always render updated pills in case user modified their tags or locations lists while in scanner view
+                renderQuickFilterPillsModule();
                 if (globalCatalogCache.length === 0) fetchAllBooksFromGoogleSheet();
             }
+        }
+
+        // --- NEW: GENERATE QUICK FILTER PILLS BAR ---
+        function renderQuickFilterPillsModule() {
+            quickFilterPillsRow.innerHTML = "";
+            
+            // 1. "All" Pill
+            const allBtn = createPillElement("✨ Show All", "");
+            if (activeSelectedCategoryFilter === "") allBtn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+            quickFilterPillsRow.appendChild(allBtn);
+
+            // 2. Location Custom Pills
+            userLocations.forEach(loc => {
+                const btn = createPillElement(`📍 ${loc}`, loc);
+                if (activeSelectedCategoryFilter === loc) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+                quickFilterPillsRow.appendChild(btn);
+            });
+
+            // 3. Tag Custom Pills
+            userTags.forEach(tag => {
+                const btn = createPillElement(`🏷️ ${tag}`, tag);
+                if (activeSelectedCategoryFilter === tag) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+                quickFilterPillsRow.appendChild(btn);
+            });
+        }
+
+        function createPillElement(label, filterVal) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "quick-filter-pill px-3 py-1 bg-gray-50 text-gray-600 border border-gray-200 text-xs font-medium rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center shrink-0";
+            btn.innerText = label;
+            btn.onclick = () => selectQuickFilterPill(btn, filterVal);
+            return btn;
+        }
+
+        function selectQuickFilterPill(selectedPill, filterVal) {
+            activeSelectedCategoryFilter = filterVal;
+            
+            // Clean active display formatting across all pills
+            document.querySelectorAll(".quick-filter-pill").forEach(p => {
+                p.classList.remove("bg-indigo-600", "text-white", "border-indigo-600");
+            });
+
+            // Handle clean resetting
+            if (filterVal === "") {
+                clearFilterLink.classList.add("hidden");
+                const firstPill = quickFilterPillsRow.children[0];
+                if(firstPill) firstPill.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+            } else {
+                clearFilterLink.classList.remove("hidden");
+                selectedPill.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+            }
+
+            filterLocalCatalogCache();
         }
 
         // --- FETCH ALL RECS FOR SEARCH MODE ---
         async function fetchAllBooksFromGoogleSheet() {
             searchStatusMessage.innerText = "Syncing with live catalog database...";
             try {
-                // Appending action parameter instructs apps script to execute a full structural scan dump
                 const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll`);
                 if (!resp.ok) throw new Error("Network connection structural disruption.");
                 const data = await resp.json();
@@ -205,28 +277,36 @@
             }
         }
 
+        // --- MODIFIED COMBINED TEXT & CATEGORY FILTER ENGINE ---
         function filterLocalCatalogCache() {
             const query = searchQueryInput.value.toLowerCase().trim();
+            const categoryFilter = activeSelectedCategoryFilter.toLowerCase();
             searchResultsList.innerHTML = "";
-        
-            // If there is no search query, show ALL books in your collection by default
+
             const filtered = globalCatalogCache.filter(b => {
-                if (query === "") return true; // <-- This ensures everything shows on initial load!
-                
+                // Phase 1: Category Pill Filtering Check
+                if (categoryFilter !== "") {
+                    const matchLoc = b.location && b.location.toLowerCase() === categoryFilter;
+                    // Tag checking accounts for potential comma separated lists
+                    const matchTag = b.tags && b.tags.toLowerCase().split(", ").includes(categoryFilter);
+                    
+                    if (!matchLoc && !matchTag) return false;
+                }
+
+                // Phase 2: Text Search Box Narrowing Check
+                if (query === "") return true;
                 return (
                     (b.title && b.title.toLowerCase().includes(query)) ||
                     (b.authors && b.authors.toLowerCase().includes(query)) ||
-                    (b.location && b.location.toLowerCase().includes(query)) ||
-                    (b.tags && b.tags.toLowerCase().includes(query)) ||
                     (b.isbn && b.isbn.includes(query))
                 );
             });
-        
+
             if (filtered.length === 0) {
-                searchResultsList.innerHTML = `<div class="bg-white rounded-xl p-6 text-center text-xs text-gray-400 border border-gray-100">No active book entries match your filter.</div>`;
+                searchResultsList.innerHTML = `<div class="bg-white rounded-xl p-6 text-center text-xs text-gray-400 border border-gray-100">No active book entries match your filters.</div>`;
                 return;
             }
-        
+
             filtered.forEach(book => {
                 const isCheckedOut = book.status === "Checked Out";
                 const card = document.createElement("div");
@@ -237,7 +317,7 @@
                     isbnInput.value = book.isbn;
                     checkExistingAndFetchMetadata(book.isbn);
                 };
-        
+
                 card.innerHTML = `
                     <div class="w-12 h-18 bg-gray-50 border rounded-md overflow-hidden flex-shrink-0">
                         <img src="${book.thumbnail || 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=100'}" class="w-full h-full object-cover">
@@ -256,43 +336,9 @@
                 searchResultsList.appendChild(card);
             });
         }
-        // --- MODIFIED SUBMIT FUNCTION TO APPEND DYNAMIC RE-SYNC ---
-        // (Ensures search index maps accurately instantly after you edit a row inside the app)
-        async function submitDataToGoogleSheets() {
-            if (!currentScannedBook) return;
-            currentScannedBook.uniqueId = selectedUniqueId;
-            currentScannedBook.location = document.getElementById("input-location").value;
-            currentScannedBook.status = document.getElementById("input-status").value;
-            currentScannedBook.borrower = document.getElementById("input-borrower").value;
-            const selectedChips = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600"));
-            currentScannedBook.tags = selectedChips.map(c => c.getAttribute("data-val")).join(", ");
-        
-            const savedBookInstance = { ...currentScannedBook };
-            bookResult.innerHTML = `<div class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>`;
-            showStatus("Syncing row transaction references with Google Sheet...", "info");
-        
-            try {
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(savedBookInstance)
-                });
-        
-                showStatus(`Successfully synced configuration: "${savedBookInstance.title}"`, "success");
-                appendSessionHistoryLog(savedBookInstance);
-                
-                // Silently refresh the local search cache indexes
-                fetchAllBooksFromGoogleSheet();
 
-                bookResult.innerHTML = `<div class="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">🎉 Profile Synced!</div>`;
-                currentScannedBook = null;
-            } catch (err) {
-                showStatus(`Spreadsheet sync error: ${err.message}`, "error");
-                renderIntegratedLayout();
-            }
-        }
-
-        // --- RETAINED EXISTING CORE SCANNING INFRASTRUCTURE ---
+        // --- RETAINED EXISTING EXTRANEOUS CONFIGURATION LOGIC ---
+        async function submitDataToGoogleSheets() { if (!currentScannedBook) return; currentScannedBook.uniqueId = selectedUniqueId; currentScannedBook.location = document.getElementById("input-location").value; currentScannedBook.status = document.getElementById("input-status").value; currentScannedBook.borrower = document.getElementById("input-borrower").value; const selectedChips = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600")); currentScannedBook.tags = selectedChips.map(c => c.getAttribute("data-val")).join(", "); const savedBookInstance = { ...currentScannedBook }; bookResult.innerHTML = `<div class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>`; showStatus("Syncing row transaction references with Google Sheet...", "info"); try { const response = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(savedBookInstance) }); showStatus(`Successfully synced configuration: "${savedBookInstance.title}"`, "success"); appendSessionHistoryLog(savedBookInstance); fetchAllBooksFromGoogleSheet(); bookResult.innerHTML = `<div class="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">🎉 Profile Synced!</div>`; currentScannedBook = null; } catch (err) { showStatus(`Spreadsheet sync error: ${err.message}`, "error"); renderIntegratedLayout(); } }
         isbnInput.addEventListener("keyup", function(e) { if (e.key === "Enter") { const q = isbnInput.value.trim().replace(/[-\s]/g, ""); if (q) checkExistingAndFetchMetadata(q); } });
         function toggleAppSettingsPanel(id) { const targets = ['location-manager-panel', 'tag-manager-panel']; targets.forEach(t => { const el = document.getElementById(t); if (t === id) el.classList.toggle("hidden"); else el.classList.add("hidden"); }); }
         function renderLocationLibrarySettings() { locationLibraryList.innerHTML = ""; userLocations.forEach((l, i) => { const s = document.createElement("span"); s.className = "inline-flex items-center gap-1 bg-white border text-gray-700 text-xs px-2 py-1 rounded-md shadow-xs font-medium"; s.innerHTML = `<span>📍 ${l}</span><button onclick="deleteCustomUserLocation(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-1 cursor-pointer">&times;</button>`; locationLibraryList.appendChild(s); }); localStorage.setItem("librify_locations", JSON.stringify(userLocations)); }
