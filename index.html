@@ -265,7 +265,7 @@
         let visibleDashboardFilters = JSON.parse(localStorage.getItem("librify_visible_filters")) || [...userLocations, ...userTags];
 
         // --- UNIVERSAL SETTINGS SYNC (Google Apps Script Backend) ---
-        function syncSettingsToServer() {
+        async function syncSettingsToServer() {
             const settingsPayload = {
                 userTags: userTags,
                 userLocations: userLocations,
@@ -273,43 +273,60 @@
                 visibleDashboardFilters: visibleDashboardFilters
             };
             
-            // Save locally immediately
+            // 1. Local caching fallback
             localStorage.setItem("librify_tags", JSON.stringify(userTags));
             localStorage.setItem("librify_locations", JSON.stringify(userLocations));
             localStorage.setItem("librify_members", JSON.stringify(householdMembers));
             localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
 
-            // Sync to Google Sheets if running inside Apps Script environment
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run.saveAppSettings(settingsPayload);
+            // 2. Sync payload directly to Google Sheet backend via POST
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "saveSettings",
+                        settings: settingsPayload
+                    })
+                });
+                console.log("Settings successfully synced to Google Sheets.");
+            } catch (e) {
+                console.error("Error syncing settings to backend:", e);
             }
         }
 
-        function loadSyncedSettingsFromServer() {
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                google.script.run.withSuccessHandler(settings => {
-                    if (settings) {
-                        if (settings.userTags) userTags = settings.userTags;
-                        if (settings.userLocations) userLocations = settings.userLocations;
-                        if (settings.householdMembers) householdMembers = settings.householdMembers;
-                        if (settings.visibleDashboardFilters) visibleDashboardFilters = settings.visibleDashboardFilters;
+        async function loadSyncedSettingsFromServer() {
+            try {
+                const cacheBuster = `&_cb=${new Date().getTime()}`;
+                const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings${cacheBuster}`);
+                if (!resp.ok) throw new Error(`HTTP Error Status: ${resp.status}`);
+                
+                const responseData = await resp.json();
+                const settings = responseData.settings;
 
-                        // Save updated server parameters back to localStorage
-                        localStorage.setItem("librify_tags", JSON.stringify(userTags));
-                        localStorage.setItem("librify_locations", JSON.stringify(userLocations));
-                        localStorage.setItem("librify_members", JSON.stringify(householdMembers));
-                        localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+                if (settings) {
+                    if (settings.userTags) userTags = settings.userTags;
+                    if (settings.userLocations) userLocations = settings.userLocations;
+                    if (settings.householdMembers) householdMembers = settings.householdMembers;
+                    if (settings.visibleDashboardFilters) visibleDashboardFilters = settings.visibleDashboardFilters;
 
-                        // Refresh UI with synced settings
-                        renderTagLibrarySettings();
-                        renderLocationLibrarySettings();
-                        renderMemberLibrarySettings();
-                        renderQuickFilterPillsModule();
-                    }
-                }).getAppSettings();
+                    // Update localStorage with synced settings from Google Sheet
+                    localStorage.setItem("librify_tags", JSON.stringify(userTags));
+                    localStorage.setItem("librify_locations", JSON.stringify(userLocations));
+                    localStorage.setItem("librify_members", JSON.stringify(householdMembers));
+                    localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+
+                    // Re-render UI components to display synced settings
+                    renderTagLibrarySettings();
+                    renderLocationLibrarySettings();
+                    renderMemberLibrarySettings();
+                    renderQuickFilterPillsModule();
+                }
+            } catch (e) {
+                console.warn("Could not retrieve remote settings, using local cache:", e);
             }
         }
-
+        
         // Initialize UI components and trigger remote settings sync
         renderTagLibrarySettings();
         renderLocationLibrarySettings();
