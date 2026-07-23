@@ -891,14 +891,12 @@
             try { 
                 let searchResults = null;
         
-                // 1. Try direct ISBN lookup first
                 if (cleanIsbn) {
                     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&printType=books&key=${GOOGLE_BOOKS_API_KEY}`;
                     const response = await fetch(googleUrl);
                     searchResults = await response.json();
                 }
         
-                // 2. Fallback: If ISBN returned no items, try searching by title/author if query exists
                 if ((!searchResults || !searchResults.items || searchResults.items.length === 0) && rawInput && isNaN(rawInput)) {
                     showStatus("Searching Google Books by title/author...", "info");
                     const fallbackUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(rawInput)}&printType=books&key=${GOOGLE_BOOKS_API_KEY}`;
@@ -906,15 +904,12 @@
                     searchResults = await fallbackResponse.json();
                 }
                 
-                // 3. Render candidate selection list if matches are found
                 if (searchResults && searchResults.items && searchResults.items.length > 0) { 
-                    // If exact ISBN match with 1 item, select directly
                     if (cleanIsbn && searchResults.items.length === 1 && !isNaN(rawInput)) {
                         selectCandidateBook(searchResults.items[0], cleanIsbn);
                         return;
                     }
         
-                    // Otherwise, present matching options to choose from
                     showStatus(`Found ${searchResults.items.length} matching candidate(s). Choose the correct edition:`, "info");
                     
                     bookResult.innerHTML = `
@@ -956,7 +951,6 @@
                     return;
                 } 
         
-                // 4. Fall back to local sheet cache if available
                 if (cachedBookData) {
                     currentScannedBook = { ...cachedBookData };
                     if (!currentScannedBook.coverImage && currentScannedBook.thumbnail) {
@@ -967,7 +961,6 @@
                     return;
                 }
         
-                // 5. PROMPT USER FOR TITLE IF ISBN LOOKUP FAILS
                 showStatus(`No matches found for barcode (${cleanIsbn}).`, "error"); 
                 
                 bookResult.innerHTML = `
@@ -985,7 +978,6 @@
                     </div>
                 `;
         
-                // Focus input box immediately
                 setTimeout(() => {
                     const fallbackInput = document.getElementById("title-search-fallback-input");
                     if (fallbackInput) {
@@ -1002,17 +994,13 @@
             } 
         }
         
-        // Helper function to submit the title fallback search
         function submitTitleFallbackSearch(originalIsbn) {
             const input = document.getElementById("title-search-fallback-input");
             if (!input || !input.value.trim()) return;
-            
-            // Set input value to the title query and run search
             isbnInput.value = input.value.trim();
             checkExistingAndFetchMetadata(originalIsbn);
         }
         
-        // Helper function to build the book profile once selected
         function selectCandidateBook(item, fallbackIsbn) {
             const vol = item.volumeInfo || {};
             const identifiers = vol.industryIdentifiers || [];
@@ -1318,8 +1306,7 @@
             html5QrcodeScanner = new Html5Qrcode("interactive-reader"); 
             const config = { 
                 fps: 10, 
-                qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; }, 
-                formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.ISBN_13 ] 
+                qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; } 
             }; 
             html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure).catch(err => { showStatus("Camera failure.", "error"); }); 
         }
@@ -1443,143 +1430,142 @@
                         </div>
                     </div>
                     
-                    <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label><select id="input-location" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium"></select></div>
-                    <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label><div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div></div>
-                    
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Location</label>
+                        <select id="input-location" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tags</label>
+                        <div id="tag-chips-container" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
                     <div class="flex gap-2 pt-2">
-                        <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer transition-all flex justify-center items-center gap-2">
-                            <span>Confirm & Sync Data Records</span>
+                        <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2">
+                            💾 Save & Sync Record
                         </button>
-                        <button id="delete-book-btn" onclick="deleteBookRecord()" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold px-4 py-3 rounded-xl text-sm transition-all cursor-pointer border border-red-200 flex items-center justify-center gap-1 shrink-0">
-                            <span>🗑️ Delete</span>
+                        <button id="delete-book-btn" onclick="deleteBookRecord()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-4 py-3 rounded-xl text-xs transition-colors cursor-pointer">
+                            🗑️ Delete
                         </button>
                     </div>
                 </div>
-            `; 
-            setupFormInteractions(); 
-        }
-        
-        function toggleStatusDependentFields() {
-            const statusSelect = document.getElementById("input-status");
-            const borrowerContainer = document.getElementById("borrower-input-container");
-            const readerContainer = document.getElementById("reader-input-container");
+            `;
             
-            if (!statusSelect) return;
-
-            if (statusSelect.value === "Checked Out") {
-                borrowerContainer.classList.remove("hidden");
-                readerContainer.classList.add("hidden");
-            } else if (statusSelect.value === "Currently Reading") {
-                readerContainer.classList.remove("hidden");
-                borrowerContainer.classList.add("hidden");
+            refreshActiveFormLocationDropdown();
+            refreshActiveFormTagChips();
+            refreshActiveFormMemberDropdown();
+            
+            if (activeCopiesData && activeCopiesData.length > 0) {
+                renderCopyInstancesSelector();
             } else {
-                borrowerContainer.classList.add("hidden");
-                readerContainer.classList.add("hidden");
-                document.getElementById("input-borrower").value = "";
-                document.getElementById("input-duedate").value = "";
+                const listEl = document.getElementById("copy-buttons-list");
+                if (listEl) listEl.innerHTML = `<span class="text-xs text-gray-400 italic">Creating a new unique item instance.</span>`;
+                selectedUniqueId = "";
             }
         }
 
-        function setupFormInteractions() { 
-            refreshActiveFormLocationDropdown(); 
-            refreshActiveFormMemberDropdown();
-            refreshActiveFormTagChips(); 
-            const cbl = document.getElementById("copy-buttons-list"); 
-            const cbi = document.getElementById("copy-badge-indicator"); 
-            
-            if (activeCopiesData.length > 0) { 
-                activeCopiesData.forEach((copy, idx) => { 
-                    const btn = document.createElement("button"); 
-                    btn.type = "button"; 
-                    btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white shadow-xs cursor-pointer"; 
-                    
-                    let statusEmoji = "🟢";
-                    if (copy.status === "Checked Out") statusEmoji = "🔴";
-                    else if (copy.status === "Currently Reading") statusEmoji = "📖";
+        function renderCopyInstancesSelector() {
+            const listEl = document.getElementById("copy-buttons-list");
+            if (!listEl) return;
+            listEl.innerHTML = "";
 
-                    btn.innerText = `Copy ${idx + 1} ${statusEmoji}`; 
-                    btn.onclick = () => loadSelectedCopyProfile(idx); 
-                    cbl.appendChild(btn); 
-                }); 
-                const ab = document.createElement("button"); 
-                ab.type = "button"; 
-                ab.className = "px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-dashed border-indigo-400 text-indigo-600 bg-indigo-50/40 cursor-pointer"; 
-                ab.innerText = "+ Add Copy"; 
-                ab.onclick = () => createNewCopyInstanceProfile(); 
-                cbl.appendChild(ab); 
-                loadSelectedCopyProfile(0); 
-            } else { 
-                selectedUniqueId = `${currentScannedBook.isbn}-1`; 
-                cbi.innerText = "Creating initial profile (Copy 1)"; 
-            } 
-            toggleStatusDependentFields();
+            activeCopiesData.forEach((copy, idx) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                const copyName = copy.location ? `Copy #${idx + 1} (${copy.location})` : `Copy #${idx + 1}`;
+                btn.className = "px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 rounded-lg text-xs font-semibold cursor-pointer hover:bg-indigo-50 transition-all";
+                btn.innerText = copyName;
+                btn.onclick = () => selectCopyInstance(copy);
+                listEl.appendChild(btn);
+            });
+
+            const newCopyBtn = document.createElement("button");
+            newCopyBtn.type = "button";
+            newCopyBtn.className = "px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold cursor-pointer hover:bg-indigo-700 transition-all";
+            newCopyBtn.innerText = "+ Add New Copy";
+            newCopyBtn.onclick = () => selectCopyInstance(null);
+            listEl.appendChild(newCopyBtn);
+
+            if (activeCopiesData.length > 0) {
+                selectCopyInstance(activeCopiesData[0]);
+            }
         }
 
-        function loadSelectedCopyProfile(i) { 
-            resetTagChipsUI(); 
-            const c = activeCopiesData[i]; 
-            selectedUniqueId = c.uniqueId; 
-            currentScannedBook.dateBorrowed = c.dateBorrowed || "";
-            currentScannedBook.dueDate = c.dueDate || "";
-            currentScannedBook.reader = c.reader || "";
-            currentScannedBook.coverImage = c.coverImage || c.thumbnail || "";
-            currentScannedBook.status = c.status || "Available";
-            currentScannedBook.tags = c.tags || "";
+        function selectCopyInstance(copy) {
+            const indicator = document.getElementById("copy-badge-indicator");
+            if (!copy) {
+                selectedUniqueId = "";
+                if (indicator) indicator.innerText = "Mode: Adding a brand new physical copy instance.";
+                document.getElementById("input-status").value = "Available";
+                toggleStatusDependentFields();
+                return;
+            }
+
+            selectedUniqueId = copy.uniqueId || "";
+            if (indicator) indicator.innerText = `Selected: Copy ID [${selectedUniqueId || 'New'}] located at ${copy.location || 'Unassigned'}`;
             
-            document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; 
-        
-            if (userLocations.includes(c.location)) document.getElementById("input-location").value = c.location; 
-            document.getElementById("input-status").value = c.status || "Available"; 
-            document.getElementById("input-borrower").value = c.borrower || "";
-            document.getElementById("input-duedate").value = c.dueDate || "";
-            
-            if (c.tags) {
-                const existingTags = c.tags.split(",").map(t => t.trim());
-                document.querySelectorAll("#tag-chips-container button").forEach(btn => {
-                    const val = btn.getAttribute("data-val");
-                    if (existingTags.includes(val)) {
-                        btn.className = "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer";
-                        btn.innerText = `🏷️ ${val}`;
+            const statusSelect = document.getElementById("input-status");
+            if (statusSelect) {
+                statusSelect.value = copy.status || "Available";
+                toggleStatusDependentFields();
+            }
+
+            const locSelect = document.getElementById("input-location");
+            if (locSelect && copy.location) {
+                locSelect.value = copy.location;
+            }
+
+            if (copy.status === "Checked Out") {
+                const borrowerInput = document.getElementById("input-borrower");
+                const dueDateInput = document.getElementById("input-duedate");
+                if (borrowerInput) borrowerInput.value = copy.borrower || "";
+                if (dueDateInput) dueDateInput.value = copy.dueDate || "";
+            } else if (copy.status === "Currently Reading") {
+                refreshActiveFormMemberDropdown(copy.reader || "");
+            }
+
+            if (copy.tags) {
+                const tagChips = document.querySelectorAll("#tag-chips-container button");
+                const copyTags = copy.tags.split(",").map(t => t.trim());
+                tagChips.forEach(chip => {
+                    const val = chip.getAttribute("data-val");
+                    const isMatched = copyTags.includes(val);
+                    const isCurrentlySelected = chip.classList.contains("bg-indigo-600");
+                    if (isMatched !== isCurrentlySelected) {
+                        toggleChipState(chip);
                     }
                 });
             }
-        
-            refreshActiveFormMemberDropdown(c.reader || "");
-            toggleStatusDependentFields();
-        }
-        
-        function createNewCopyInstanceProfile() { 
-            const ni = activeCopiesData.length + 1; 
-            selectedUniqueId = `${currentScannedBook.isbn}-${ni}`; 
-            document.getElementById("copy-badge-indicator").innerText = `Staging New: Copy ${ni}`; 
-            const bl = document.getElementById("copy-buttons-list").children; 
-            Array.from(bl).forEach((b, idx) => { 
-                if (idx === activeCopiesData.length) b.className = "px-3 py-1.5 text-xs font-bold rounded-lg border bg-indigo-600 text-white shadow-xs cursor-pointer"; 
-                else b.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 shadow-xs cursor-pointer"; 
-            }); 
-            document.getElementById("input-status").value = "Available"; 
-            document.getElementById("input-borrower").value = ""; 
-            document.getElementById("input-duedate").value = "";
-            currentScannedBook.dateBorrowed = "";
-            toggleStatusDependentFields();
-            resetTagChipsUI(); 
         }
 
-        function resetTagChipsUI() { 
-            document.querySelectorAll(".tag-chip").forEach(ch => { 
-                ch.className = "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; 
-                ch.innerText = `➕ ${ch.getAttribute("data-val")}`; 
-            }); 
+        function toggleStatusDependentFields() {
+            const statusVal = document.getElementById("input-status").value;
+            const borrowerContainer = document.getElementById("borrower-input-container");
+            const readerContainer = document.getElementById("reader-input-container");
+
+            borrowerContainer.classList.add("hidden");
+            readerContainer.classList.add("hidden");
+
+            if (statusVal === "Checked Out") {
+                borrowerContainer.classList.remove("hidden");
+            } else if (statusVal === "Currently Reading") {
+                readerContainer.classList.remove("hidden");
+                refreshActiveFormMemberDropdown();
+            }
         }
 
-        function appendSessionHistoryLog(b) { 
-            historySection.classList.remove("hidden"); 
-            const c = b.uniqueId.split("-")[1] || "1"; 
-            const sl = b.status === "Checked Out" ? `<span class="text-red-600 font-semibold">Out</span>` : (b.status === "Currently Reading" ? `<span class="text-indigo-600 font-semibold">Reading</span>` : `<span class="text-emerald-600 font-semibold">Available</span>`); 
-            const li = document.createElement("div"); 
-            li.className = "bg-white border border-gray-200 rounded-xl p-3 flex justify-between items-center text-xs shadow-xs"; 
-            li.innerHTML = `<div><p class="font-bold text-gray-800">${b.title}</p></div><div>${sl}</div>`; 
-            sessionLog.prepend(li); 
+        function appendSessionHistoryLog(book) {
+            historySection.classList.remove("hidden");
+            const entry = document.createElement("div");
+            entry.className = "bg-white p-3 rounded-xl border border-gray-100 text-xs flex justify-between items-center shadow-2xs";
+            entry.innerHTML = `
+                <div>
+                    <p class="font-bold text-gray-800">${book.title}</p>
+                    <p class="text-gray-400 text-[10px]">Status: ${book.status || 'Available'} • ISBN: ${book.isbn}</p>
+                </div>
+                <span class="text-emerald-600 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded">Synced</span>
+            `;
+            sessionLog.prepend(entry);
         }
     </script>
 </body>
