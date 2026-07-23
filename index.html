@@ -1341,7 +1341,22 @@
                 : (isCopyDueSoon ? `<div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-bold text-center">⏳ NOTICE: Due in less than 3 days!</div>` : '');
 
             const borrowedDateHTML = (currentScannedBook.status === "Checked Out" && currentScannedBook.dateBorrowed) ? `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex justify-between items-center"><span class="font-medium">Tracking Borrow Date Out</span><span class="font-mono font-bold">${currentScannedBook.dateBorrowed}</span></div>` : '';
-        
+
+            const htmlContent = `
+                <div class="book-card p-4 bg-white rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="font-bold text-slate-800">${book.title}</h3>
+                    <p class="text-sm text-slate-500">${book.author}</p>
+                    
+                    <!-- Delete Button Integration -->
+                    <button onclick="deleteBook('${book.isbn}', '${book.title.replace(/'/g, "\\'")}')" 
+                        class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-3 rounded-xl text-sm border border-rose-200 transition-all cursor-pointer mt-2">
+                        Delete Book
+                    </button>
+                </div>
+            `;
+    
+    document.getElementById('result-container').innerHTML = htmlContent;
+            
             bookResult.innerHTML = `
                 ${overdueBannerHTML}
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
@@ -1400,6 +1415,29 @@
                 </div>
             `; 
             setupFormInteractions(); 
+        }
+
+        function deleteBook(isbn, title) {
+            if (!confirm(`Are you sure you want to delete "${title}" from your library?`)) {
+                return;
+            }
+        
+            // Call your Apps Script backend endpoint
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'deleteBook', isbn: isbn }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Book deleted successfully.');
+                    // Refresh your globalCatalogCache or UI list here
+                } else {
+                    alert('Error deleting book: ' + result.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
         
         function toggleStatusDependentFields() {
