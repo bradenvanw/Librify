@@ -847,24 +847,24 @@
                     searchResults = await response.json();
                 }
         
-                // 2. Fallback: If ISBN returns no items (or raw input exists), search by general query
-                if ((!searchResults || !searchResults.items || searchResults.items.length === 0) && rawInput) {
-                    showStatus("ISBN lookup failed. Fallback searching by Title/Author...", "info");
+                // 2. Fallback: If ISBN returned no items, try searching by title/author if query exists
+                if ((!searchResults || !searchResults.items || searchResults.items.length === 0) && rawInput && isNaN(rawInput)) {
+                    showStatus("Searching Google Books by title/author...", "info");
                     const fallbackUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(rawInput)}&printType=books&key=${GOOGLE_BOOKS_API_KEY}`;
                     const fallbackResponse = await fetch(fallbackUrl);
                     searchResults = await fallbackResponse.json();
                 }
                 
-                // 3. Render selection list if multiple or fallback results exist
+                // 3. Render candidate selection list if matches are found
                 if (searchResults && searchResults.items && searchResults.items.length > 0) { 
-                    // If it was an exact ISBN match with only 1 result, auto-select it directly
-                    if (cleanIsbn && searchResults.items.length === 1) {
+                    // If exact ISBN match with 1 item, select directly
+                    if (cleanIsbn && searchResults.items.length === 1 && !isNaN(rawInput)) {
                         selectCandidateBook(searchResults.items[0], cleanIsbn);
                         return;
                     }
         
-                    // Otherwise, show candidate list for manual selection
-                    showStatus(`Found ${searchResults.items.length} matching candidate(s). Please choose the correct edition:`, "info");
+                    // Otherwise, present matching options to choose from
+                    showStatus(`Found ${searchResults.items.length} matching candidate(s). Choose the correct edition:`, "info");
                     
                     bookResult.innerHTML = `
                         <div class="space-y-3">
@@ -916,12 +916,49 @@
                     return;
                 }
         
-                showStatus(`No online records found for "${rawInput}". Use manual entry below.`, "error"); 
-                bookResult.innerHTML = ""; 
+                // 5. PROMPT USER FOR TITLE IF ISBN LOOKUP FAILS
+                showStatus(`No matches found for barcode (${cleanIsbn}).`, "error"); 
+                
+                bookResult.innerHTML = `
+                    <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-2xs space-y-3 text-left">
+                        <div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
+                            <span>🔍</span> Barcode Unrecognized
+                        </div>
+                        <p class="text-xs text-gray-600">We couldn't find a book matching ISBN <code class="bg-gray-100 px-1 py-0.5 rounded font-mono text-gray-800">${cleanIsbn}</code>. Try searching by title or author instead:</p>
+                        <div class="flex gap-2 pt-1">
+                            <input type="text" id="title-search-fallback-input" placeholder="e.g., Dune, Isaac Asimov..." class="flex-grow bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button onclick="submitTitleFallbackSearch('${cleanIsbn}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                `;
+        
+                // Focus input box immediately
+                setTimeout(() => {
+                    const fallbackInput = document.getElementById("title-search-fallback-input");
+                    if (fallbackInput) {
+                        fallbackInput.focus();
+                        fallbackInput.addEventListener("keyup", (e) => {
+                            if (e.key === "Enter") submitTitleFallbackSearch(cleanIsbn);
+                        });
+                    }
+                }, 100);
+        
             } catch (err) { 
                 showStatus(`Lookup error: ${err.message}`, "error");
                 bookResult.innerHTML = ""; 
             } 
+        }
+        
+        // Helper function to submit the title fallback search
+        function submitTitleFallbackSearch(originalIsbn) {
+            const input = document.getElementById("title-search-fallback-input");
+            if (!input || !input.value.trim()) return;
+            
+            // Set input value to the title query and run search
+            isbnInput.value = input.value.trim();
+            checkExistingAndFetchMetadata(originalIsbn);
         }
         
         // Helper function to build the book profile once selected
