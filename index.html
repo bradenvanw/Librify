@@ -789,6 +789,9 @@
             const activeTagButtons = document.querySelectorAll("#tag-chips-container button.bg-indigo-600"); 
             const selectedTagsArray = Array.from(activeTagButtons).map(c => c.getAttribute("data-val")).filter(Boolean);
             currentScannedBook.tags = selectedTagsArray.join(", "); 
+
+            const notesField = document.getElementById("input-notes");
+            currentScannedBook.notes = notesField ? notesField.value : (currentScannedBook.notes || "");
             
             const savedBookInstance = { 
                 action: "saveBook",
@@ -1463,6 +1466,7 @@
                     
                     <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label><select id="input-location" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium"></select></div>
                     <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label><div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div></div>
+                    <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Personal Notes</label><textarea id="input-notes" rows="3" placeholder="Anything you want to remember about this copy..." class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea></div>
                     
                     <div class="flex gap-2 pt-2">
                         <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer transition-all flex justify-center items-center gap-2">
@@ -1559,6 +1563,7 @@
             currentScannedBook.coverImage = c.coverImage || c.thumbnail || "";
             currentScannedBook.status = c.status || "Available";
             currentScannedBook.tags = c.tags || "";
+            currentScannedBook.notes = c.notes || "";
             
             document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; 
         
@@ -1566,6 +1571,7 @@
             document.getElementById("input-status").value = c.status || "Available"; 
             document.getElementById("input-borrower").value = c.borrower || "";
             document.getElementById("input-duedate").value = c.dueDate || "";
+            document.getElementById("input-notes").value = c.notes || "";
             
             if (c.tags) {
                 const existingTags = c.tags.split(",").map(t => t.trim());
@@ -1599,6 +1605,7 @@
             document.getElementById("input-status").value = "Available"; 
             document.getElementById("input-borrower").value = ""; 
             document.getElementById("input-duedate").value = "";
+            document.getElementById("input-notes").value = "";
             currentScannedBook.dateBorrowed = "";
             toggleStatusDependentFields();
             resetTagChipsUI(); 
