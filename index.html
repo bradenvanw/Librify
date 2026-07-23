@@ -406,21 +406,32 @@
                 const cacheBuster = `&_cb=${new Date().getTime()}`;
                 const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll${cacheBuster}`);
                 if (!resp.ok) throw new Error(`HTTP Error Status: ${resp.status}`);
-                const data = await resp.json();
+                const responseData = await resp.json();
                 
-                if (!data || !data.books) {
-                    searchStatusMessage.innerHTML = "⚠️ Script connected, but returned no 'books' array.";
-                    searchResultsList.innerHTML = `<div class="bg-amber-50 rounded-xl p-6 text-center border border-amber-200"><p class="text-xs font-bold text-amber-800">Empty Database</p></div>`;
+                // Handle both response formats (responseData.data OR responseData.books OR direct array)
+                const booksList = responseData.data || responseData.books || (Array.isArray(responseData) ? responseData : null);
+        
+                if (!booksList) {
+                    searchStatusMessage.innerHTML = "⚠️ Script connected, but payload format was unrecognized.";
+                    searchResultsList.innerHTML = `<div class="bg-amber-50 rounded-xl p-6 text-center border border-amber-200"><p class="text-xs font-bold text-amber-800">Invalid Response Format</p></div>`;
+                    runDatabaseAnalyticsEngine();
+                    return;
+                }
+        
+                if (booksList.length === 0) {
+                    searchStatusMessage.innerHTML = "✅ Database connected, but contains 0 books.";
+                    searchResultsList.innerHTML = `<div class="bg-gray-50 rounded-xl p-6 text-center border border-gray-200"><p class="text-xs text-gray-500">Your sheet is currently empty. Scan a barcode to add your first book!</p></div>`;
+                    globalCatalogCache = [];
                     runDatabaseAnalyticsEngine();
                     return;
                 }
                 
-                globalCatalogCache = data.books;
+                globalCatalogCache = booksList;
                 searchStatusMessage.innerText = `✅ Database synchronized: ${globalCatalogCache.length} books loaded.`;
                 filterLocalCatalogCache();
                 runDatabaseAnalyticsEngine();
             } catch(e) {
-                searchStatusMessage.innerHTML = "❌ Connection Failed.";
+                searchStatusMessage.innerHTML = `❌ Connection Failed: ${e.message}`;
                 runDatabaseAnalyticsEngine();
             }
         }
