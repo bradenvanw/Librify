@@ -129,7 +129,7 @@
 
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
                 <div class="flex gap-2">
-                    <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Type a book title or author..." 
+                    <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Title, author, category, or ISBN..." 
                         class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                     <button onclick="fetchAllBooksFromGoogleSheet()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1 whitespace-nowrap cursor-pointer">
                         🔄 Refresh
@@ -447,10 +447,14 @@
                     if (!matchLoc && !matchTag) return false;
                 }
                 if (query === "") return true;
+                
+                // NEW: Added b.categories and b.genre search checks
                 return (
                     (b.title && b.title.toLowerCase().includes(query)) ||
                     (b.authors && b.authors.toLowerCase().includes(query)) ||
-                    (b.isbn && b.isbn.includes(query))
+                    (b.isbn && b.isbn.includes(query)) ||
+                    (b.categories && b.categories.toLowerCase().includes(query)) ||
+                    (b.genre && b.genre.toLowerCase().includes(query))
                 );
             });
 
@@ -487,10 +491,12 @@
                     if (match) displayYear = match[0];
                 }
 
-                // FIX: Use coverImage property from Apps Script backend
                 const displayCover = (book.coverImage && book.coverImage.trim() !== "") 
                     ? book.coverImage 
                     : (book.thumbnail || FALLBACK_COVER);
+                
+                // NEW: Resolve display category/genre
+                const displayCategory = book.categories || book.genre || "General";
         
                 const card = document.createElement("div");
                 card.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-2xs flex gap-3 items-start text-left cursor-pointer hover:border-indigo-200 transition-colors relative overflow-hidden";
@@ -519,8 +525,20 @@
                             <h4 class="text-xs font-bold text-gray-900 truncate leading-tight">${book.title || 'Untitled Book'}</h4>
                             <p class="text-[11px] font-medium text-gray-500 truncate">by ${book.authors || 'Unknown Author'}</p>
                         </div>
-                        <div class="flex items-center gap-2 text-[10px] text-gray-400 font-medium"><span>📅 ${displayYear}</span><span>•</span><span>📖 ${book.pageCount || 'N/A'} pgs</span></div>
-                        <div class="flex items-center justify-between pt-1 gap-2"><span class="text-[9px] bg-gray-100 font-semibold px-1.5 py-0.5 rounded text-gray-600 truncate max-w-[160px]">📍 ${book.location || 'Unassigned'}</span>${(!isCheckedOut && !isCurrentlyReading) ? statusBadgeHTML : ''}</div>
+                        
+                        <!-- NEW: Display Category Badge along with Year & Page Count -->
+                        <div class="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
+                            <span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded text-[9px] font-semibold truncate max-w-[110px]">${displayCategory}</span>
+                            <span>•</span>
+                            <span>📅 ${displayYear}</span>
+                            <span>•</span>
+                            <span>📖 ${book.pageCount || 'N/A'} pgs</span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between pt-1 gap-2">
+                            <span class="text-[9px] bg-gray-100 font-semibold px-1.5 py-0.5 rounded text-gray-600 truncate max-w-[160px]">📍 ${book.location || 'Unassigned'}</span>
+                            ${(!isCheckedOut && !isCurrentlyReading) ? statusBadgeHTML : ''}
+                        </div>
                         ${(isCheckedOut || isCurrentlyReading) ? statusBadgeHTML : ''}
                     </div>
                 `;
@@ -605,7 +623,6 @@
             const selectedChips = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600")); 
             currentScannedBook.tags = selectedChips.map(c => c.getAttribute("data-val")).join(", "); 
             
-            // FIX: Ensure coverImage property is attached before saving
             const savedBookInstance = { 
                 ...currentScannedBook,
                 coverImage: currentScannedBook.coverImage || currentScannedBook.thumbnail || ""
@@ -670,7 +687,6 @@
                 if (searchResults.items && searchResults.items.length > 0) { 
                     const vol = searchResults.items[0].volumeInfo; 
                     
-                    // FIX: Map Google Books cover image URL to coverImage property
                     const fetchedCover = vol.imageLinks && vol.imageLinks.thumbnail 
                         ? vol.imageLinks.thumbnail.replace("http://", "https://") 
                         : FALLBACK_COVER;
@@ -713,7 +729,7 @@
             } catch (err) { 
                 bookResult.innerHTML = ""; 
             } 
-        }
+        } 
         
         isbnInput.addEventListener("keyup", function(e) { if (e.key === "Enter") { const q = isbnInput.value.trim().replace(/[-\s]/g, ""); if (q) checkExistingAndFetchMetadata(q); } });
         
@@ -903,7 +919,7 @@
                     <div class="space-y-1 sm:space-y-2 flex-grow min-w-0 text-left">
                         <h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate">${currentScannedBook.title}</h2>${subtitleHTML}
                         <p class="text-xs sm:text-sm font-medium text-indigo-600 truncate">by ${currentScannedBook.authors}</p>
-                        <div class="flex flex-wrap gap-1 mt-1"><span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">${currentScannedBook.genre || "General"}</span></div>
+                        <div class="flex flex-wrap gap-1 mt-1"><span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">${currentScannedBook.categories || currentScannedBook.genre || "General"}</span></div>
                     </div>
                 </div>
                 
