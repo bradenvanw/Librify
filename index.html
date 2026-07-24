@@ -1476,13 +1476,36 @@
             }
         }
 
-        function deleteHouseholdMember(i) {
+        async function deleteHouseholdMember(i) {
+            const member = householdMembers[i];
+            const memberTags = userTags.filter(t => tagOwner(t) === member);
+
+            if (memberTags.length > 0) {
+                const tagLabels = memberTags.map(t => t.slice(member.length + 2)).join(', ');
+                const proceed = confirm(`Delete "${member}"? This will also remove their personal tag(s) — ${tagLabels} — from every book that has them.`);
+                if (!proceed) return;
+            }
+
             householdMembers.splice(i, 1);
+
+            for (const tag of memberTags) {
+                const idx = userTags.indexOf(tag);
+                if (idx === -1) continue;
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== tag);
+                userTags.splice(idx, 1);
+
+                const usageCount = globalCatalogCache.filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(tag)).length;
+                if (usageCount > 0) await cascadeClearOnServer("tag", tag);
+            }
+
             syncSettingsToServer();
             renderMemberLibrarySettings();
             renderTagLibrarySettings();
+            if (currentScannedBook) refreshActiveFormTagChips();
             if (currentScannedBook) refreshActiveFormMemberDropdown();
             if (!viewHomeMode.classList.contains("hidden")) renderHomeTab();
+
+            if (memberTags.length > 0) await fetchAllBooksFromGoogleSheet();
         }
 
         function refreshActiveFormMemberDropdown(selectedReader = "") {
