@@ -1014,9 +1014,16 @@
                 currentScannedBook.dateBorrowed = ""; 
             }
             
+            // Preserve any tags that aren't manageable by the current active user (i.e. other
+            // members' personal tags) exactly as they were, regardless of what's shown as
+            // chips — then merge in whatever's currently selected among the manageable ones.
+            const existingTags = (currentScannedBook.tags || "").split(",").map(t => t.trim()).filter(Boolean);
+            const preservedTags = existingTags.filter(t => !isTagManageable(t));
+
             const activeTagButtons = document.querySelectorAll("#tag-chips-container button.bg-indigo-600"); 
-            const selectedTagsArray = Array.from(activeTagButtons).map(c => c.getAttribute("data-val")).filter(Boolean);
-            currentScannedBook.tags = selectedTagsArray.join(", "); 
+            const selectedManageableTags = Array.from(activeTagButtons).map(c => c.getAttribute("data-val")).filter(Boolean);
+
+            currentScannedBook.tags = [...new Set([...preservedTags, ...selectedManageableTags])].join(", "); 
 
             const notesField = document.getElementById("input-notes");
             currentScannedBook.notes = notesField ? notesField.value : (currentScannedBook.notes || "");
@@ -1444,6 +1451,14 @@
             return match || null;
         }
 
+        // A tag is manageable (shown as a chip, can be added/removed) if it's global,
+        // or if it belongs to the current active user. Other members' personal tags are
+        // never manageable here — they're preserved as-is at save time regardless.
+        function isTagManageable(tagName) {
+            const owner = tagOwner(tagName);
+            return !owner || owner === currentActiveUser;
+        }
+
         function addNewHouseholdMember() {
             const v = newMemberInput.value.trim();
             if (v && !householdMembers.includes(v)) {
@@ -1769,14 +1784,8 @@
                 s = Array.from(document.querySelectorAll(".tag-chip.bg-indigo-600")).map(ch => ch.getAttribute("data-val"));
             }
 
-            c.innerHTML = ""; 
-            userTags.filter(t => {
-                const owner = tagOwner(t);
-                // Show: global tags, the active user's own tags, and anything already
-                // selected on this book (even another member's tag) so it never silently
-                // disappears from the book just because someone else is the active user.
-                return !owner || owner === currentActiveUser || s.includes(t);
-            }).forEach(t => { 
+            c.innerHTML = "";
+            userTags.filter(t => isTagManageable(t)).forEach(t => { 
                 const isS = s.includes(t); 
                 const b = document.createElement("button"); 
                 b.type = "button"; 
