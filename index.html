@@ -1447,6 +1447,12 @@
             const coverUrl = currentScannedBook.coverImage || currentScannedBook.thumbnail || FALLBACK_COVER;
             const subtitleHTML = currentScannedBook.subtitle ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` : '';
             const descriptionHTML = currentScannedBook.description ? `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-xs text-gray-600 leading-relaxed text-left"><span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span>${currentScannedBook.description}</div>` : '';
+
+            let displayYear = "N/A";
+            if (currentScannedBook.publishedDate) {
+                const yearMatch = currentScannedBook.publishedDate.toString().match(/\d{4}/);
+                if (yearMatch) displayYear = yearMatch[0];
+            }
             
             const isCopyOverdue = currentScannedBook.status === "Checked Out" && checkItemOverdueStatus(currentScannedBook.dueDate);
             const isCopyDueSoon = currentScannedBook.status === "Checked Out" && !isCopyOverdue && checkItemDueSoonStatus(currentScannedBook.dueDate);
@@ -1466,7 +1472,13 @@
                     <div class="space-y-1 sm:space-y-2 flex-grow min-w-0 text-left">
                         <h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate">${currentScannedBook.title}</h2>${subtitleHTML}
                         <p class="text-xs sm:text-sm font-medium text-indigo-600 truncate">by ${currentScannedBook.authors}</p>
-                        <div class="flex flex-wrap gap-1 mt-1"><span class="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">${currentScannedBook.categories || currentScannedBook.genre || "General"}</span></div>
+                        <div class="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
+                            <span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-semibold truncate max-w-[110px]">${currentScannedBook.categories || currentScannedBook.genre || "General"}</span>
+                            <span>•</span>
+                            <span>📅 ${displayYear}</span>
+                            <span>•</span>
+                            <span>📖 ${currentScannedBook.pageCount || 'N/A'} pgs</span>
+                        </div>
                     </div>
                 </div>
                 
