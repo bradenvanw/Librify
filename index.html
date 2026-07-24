@@ -428,6 +428,27 @@
             }
         }
 
+        // Removes a tag or location from every book that has it (no replacement).
+        async function cascadeClearOnServer(type, value) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "clearCategoryValue",
+                        token: SHARED_SECRET,
+                        type: type,
+                        value: value
+                    })
+                });
+                const resData = await response.json();
+                return resData.status === "success";
+            } catch (e) {
+                console.error("Error cascading clear to backend:", e);
+                return false;
+            }
+        }
+
         async function loadSyncedSettingsFromServer() {
             try {
                 const cacheBuster = `&_cb=${new Date().getTime()}`;
@@ -1348,13 +1369,47 @@
             } 
         }
         
-        function deleteCustomUserLocation(i) { 
+        async function deleteCustomUserLocation(i) { 
             const removed = userLocations[i];
-            visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
-            userLocations.splice(i, 1); 
-            syncSettingsToServer();
-            renderLocationLibrarySettings(); 
-            if (currentScannedBook) refreshActiveFormLocationDropdown(); 
+            const usageCount = globalCatalogCache.filter(b => (b.location || "").toString().trim() === removed).length;
+
+            if (usageCount > 0) {
+                const proceed = confirm(`"${removed}" is currently used by ${usageCount} book(s). Delete it anyway?`);
+                if (!proceed) return;
+
+                const replacement = prompt(`Optionally enter a replacement location to reassign those ${usageCount} book(s) to.\nLeave blank to just clear their location.`, "");
+                const trimmedReplacement = (replacement || "").trim();
+
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+                userLocations.splice(i, 1);
+
+                let success;
+                if (trimmedReplacement) {
+                    if (!userLocations.includes(trimmedReplacement)) {
+                        userLocations.push(trimmedReplacement);
+                        visibleDashboardFilters.push(trimmedReplacement);
+                    }
+                    success = await cascadeRenameOnServer("location", removed, trimmedReplacement);
+                } else {
+                    success = await cascadeClearOnServer("location", removed);
+                }
+
+                syncSettingsToServer();
+                renderLocationLibrarySettings();
+                if (currentScannedBook) refreshActiveFormLocationDropdown();
+
+                if (success) {
+                    await fetchAllBooksFromGoogleSheet();
+                } else {
+                    alert(`Removed from settings, but couldn't update existing books on the server. You may need to try again.`);
+                }
+            } else {
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+                userLocations.splice(i, 1); 
+                syncSettingsToServer();
+                renderLocationLibrarySettings(); 
+                if (currentScannedBook) refreshActiveFormLocationDropdown(); 
+            }
         }
 
         async function renameCustomUserLocation(i) {
@@ -1430,13 +1485,47 @@
             } 
         }
         
-        function deleteCustomUserTag(i) { 
+        async function deleteCustomUserTag(i) { 
             const removed = userTags[i];
-            visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
-            userTags.splice(i, 1); 
-            syncSettingsToServer();
-            renderTagLibrarySettings(); 
-            if (currentScannedBook) refreshActiveFormTagChips(); 
+            const usageCount = globalCatalogCache.filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(removed)).length;
+
+            if (usageCount > 0) {
+                const proceed = confirm(`"${removed}" is currently used by ${usageCount} book(s). Delete it anyway?`);
+                if (!proceed) return;
+
+                const replacement = prompt(`Optionally enter a replacement tag to reassign those ${usageCount} book(s) to.\nLeave blank to just remove the tag from them.`, "");
+                const trimmedReplacement = (replacement || "").trim();
+
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+                userTags.splice(i, 1);
+
+                let success;
+                if (trimmedReplacement) {
+                    if (!userTags.includes(trimmedReplacement)) {
+                        userTags.push(trimmedReplacement);
+                        visibleDashboardFilters.push(trimmedReplacement);
+                    }
+                    success = await cascadeRenameOnServer("tag", removed, trimmedReplacement);
+                } else {
+                    success = await cascadeClearOnServer("tag", removed);
+                }
+
+                syncSettingsToServer();
+                renderTagLibrarySettings();
+                if (currentScannedBook) refreshActiveFormTagChips();
+
+                if (success) {
+                    await fetchAllBooksFromGoogleSheet();
+                } else {
+                    alert(`Removed from settings, but couldn't update existing books on the server. You may need to try again.`);
+                }
+            } else {
+                visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
+                userTags.splice(i, 1); 
+                syncSettingsToServer();
+                renderTagLibrarySettings(); 
+                if (currentScannedBook) refreshActiveFormTagChips(); 
+            }
         }
 
         async function renameCustomUserTag(i) {
