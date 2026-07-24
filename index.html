@@ -248,10 +248,6 @@
                 Add household members in Settings, then pick one from the 👤 selector in the top-left to see their personal Home view here.
             </div>
 
-            <div id="home-no-active-user-message" class="hidden bg-white rounded-2xl p-6 text-center text-xs text-gray-400 border border-gray-100">
-                Pick a household member from the 👤 selector in the top-left to see their Home view.
-            </div>
-
             <div id="home-member-content" class="space-y-6 hidden">
                 <h2 id="home-member-heading" class="text-lg font-bold text-gray-800"></h2>
 
@@ -349,6 +345,24 @@
         </div>
     </div>
 
+    <!-- Reassign Modal (used when deleting an in-use tag or location) -->
+    <div id="reassign-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h3 class="text-sm font-bold text-gray-800 uppercase">Delete & Reassign</h3>
+            </div>
+            <p id="reassign-modal-message" class="text-xs text-gray-600"></p>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">Reassign affected books to</label>
+                <select id="reassign-modal-select" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"></select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="resolveReassignModal(undefined)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold cursor-pointer transition-colors">Cancel</button>
+                <button onclick="confirmReassignModal()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Book Detail Modal -->
     <div id="book-detail-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
         <div class="max-w-xl w-full my-8 relative space-y-4">
@@ -377,7 +391,8 @@
 
         // The "active user" applies across the whole app — Home tab and the tag chips
         // shown when editing a book both reflect whichever member is selected here.
-        let currentActiveUser = localStorage.getItem("librify_active_user") || "";
+        const EVERYONE_USER = "__EVERYONE__";
+        let currentActiveUser = localStorage.getItem("librify_active_user") || EVERYONE_USER;
 
         const addBookModal = document.getElementById("add-book-modal");
         const actionBtnContainer = document.getElementById("action-btn-container");
@@ -906,26 +921,20 @@
 
         function renderHomeTab() {
             const noMembersMsg = document.getElementById("home-no-members-message");
-            const noActiveUserMsg = document.getElementById("home-no-active-user-message");
             const memberContent = document.getElementById("home-member-content");
 
             if (householdMembers.length === 0) {
                 noMembersMsg.classList.remove("hidden");
-                noActiveUserMsg.classList.add("hidden");
                 memberContent.classList.add("hidden");
                 return;
             }
             noMembersMsg.classList.add("hidden");
-
-            if (!currentActiveUser || !householdMembers.includes(currentActiveUser)) {
-                noActiveUserMsg.classList.remove("hidden");
-                memberContent.classList.add("hidden");
-                return;
-            }
-            noActiveUserMsg.classList.add("hidden");
             memberContent.classList.remove("hidden");
 
-            document.getElementById("home-member-heading").innerText = `👋 ${currentActiveUser}'s Home`;
+            document.getElementById("home-member-heading").innerText = (currentActiveUser === EVERYONE_USER)
+                ? `🌐 Everyone's Home`
+                : `👋 ${currentActiveUser}'s Home`;
+
             renderHomeMemberContent();
         }
 
@@ -935,22 +944,40 @@
             readingContainer.innerHTML = "";
             wantToReadContainer.innerHTML = "";
 
-            if (!currentActiveUser || !householdMembers.includes(currentActiveUser)) return;
+            const isEveryone = currentActiveUser === EVERYONE_USER;
+            let readingBooks, wantToReadBooks, emptyWantMsg, emptyReadingMsg;
 
-            const readingBooks = globalCatalogCache.filter(b => b.status === "Currently Reading" && b.reader === currentActiveUser);
-            const wantTag = wantToReadTagFor(currentActiveUser);
-            const wantToReadBooks = globalCatalogCache.filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(wantTag));
+            if (isEveryone) {
+                readingBooks = globalCatalogCache.filter(b => b.status === "Currently Reading");
+                const allWantTags = householdMembers.map(m => wantToReadTagFor(m));
+                wantToReadBooks = globalCatalogCache.filter(b => {
+                    const bookTags = (b.tags || "").toString().split(",").map(t => t.trim());
+                    return allWantTags.some(wt => bookTags.includes(wt));
+                });
+                emptyReadingMsg = "No one is currently reading anything.";
+                emptyWantMsg = "No books on anyone's want-to-read list yet.";
+            } else {
+                if (!currentActiveUser || !householdMembers.includes(currentActiveUser)) return;
+                readingBooks = globalCatalogCache.filter(b => b.status === "Currently Reading" && b.reader === currentActiveUser);
+                const wantTag = wantToReadTagFor(currentActiveUser);
+                wantToReadBooks = globalCatalogCache.filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(wantTag));
+                emptyReadingMsg = "Not currently reading anything.";
+                emptyWantMsg = `No books on the want-to-read list yet. Add the "${wantTag}" tag to a book to add it here.`;
+            }
 
             if (readingBooks.length === 0) {
-                readingContainer.innerHTML = `<div class="text-xs text-gray-400 italic py-2">Not currently reading anything.</div>`;
+                readingContainer.innerHTML = `<div class="text-xs text-gray-400 italic py-2">${emptyReadingMsg}</div>`;
             } else {
                 readingBooks.forEach(book => {
                     const item = document.createElement("div");
                     item.className = "flex items-center justify-between bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 text-xs cursor-pointer hover:border-indigo-300 transition-colors";
+                    const subline = isEveryone
+                        ? `<p class="text-indigo-600 font-medium">Reader: <b>${book.reader || 'Unassigned'}</b></p>`
+                        : `<p class="text-indigo-600 font-medium">by ${book.authors || 'Unknown Author'}</p>`;
                     item.innerHTML = `
                         <div>
                             <p class="font-bold text-gray-900">${book.title}</p>
-                            <p class="text-indigo-600 font-medium">by ${book.authors || 'Unknown Author'}</p>
+                            ${subline}
                         </div>
                         <button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white border border-indigo-200 px-2.5 py-1 rounded-lg font-bold text-indigo-600 cursor-pointer hover:bg-indigo-50 transition-colors">Manage</button>
                     `;
@@ -959,7 +986,7 @@
             }
 
             if (wantToReadBooks.length === 0) {
-                wantToReadContainer.innerHTML = `<div class="text-xs text-gray-400 italic py-2">No books on the want-to-read list yet. Add the "${wantTag}" tag to a book to add it here.</div>`;
+                wantToReadContainer.innerHTML = `<div class="text-xs text-gray-400 italic py-2">${emptyWantMsg}</div>`;
             } else {
                 wantToReadBooks.forEach(book => {
                     const item = document.createElement("div");
@@ -1025,8 +1052,17 @@
 
             currentScannedBook.tags = [...new Set([...preservedTags, ...selectedManageableTags])].join(", "); 
 
-            const notesField = document.getElementById("input-notes");
-            currentScannedBook.notes = notesField ? notesField.value : (currentScannedBook.notes || "");
+            // Rebuild the notes object: start from whatever was already stored (preserving
+            // any other members' personal notes untouched), then overwrite just the shared
+            // note and the active user's own note from the form.
+            const notesObj = parseNotesField(currentScannedBook.notes);
+            const sharedNotesField = document.getElementById("input-notes");
+            if (sharedNotesField) notesObj.shared = sharedNotesField.value;
+            if (currentActiveUser !== EVERYONE_USER) {
+                const memberNoteField = document.getElementById("input-member-note");
+                if (memberNoteField) notesObj[currentActiveUser] = memberNoteField.value;
+            }
+            currentScannedBook.notes = serializeNotesField(notesObj);
             
             const savedBookInstance = { 
                 action: "saveBook",
@@ -1310,6 +1346,47 @@
             document.getElementById("manual-entry-modal").classList.add("hidden");
         }
 
+        // Promise-based modal: resolves with the chosen replacement tag/location name,
+        // "" if the user chose to just clear it, or undefined if cancelled.
+        let reassignModalResolver = null;
+
+        function openReassignModal(type, name, usageCount) {
+            return new Promise(resolve => {
+                reassignModalResolver = resolve;
+                const noun = type === "location" ? "location" : "tag";
+                document.getElementById("reassign-modal-message").innerText =
+                    `"${name}" is used by ${usageCount} book(s). Pick an existing ${noun} to reassign them to, or leave "Just remove it" to clear it from those books.`;
+
+                const select = document.getElementById("reassign-modal-select");
+                select.innerHTML = `<option value="">— Just remove it —</option>`;
+                const pool = type === "location" ? userLocations : userTags;
+                pool.filter(v => v !== name).forEach(v => {
+                    const opt = document.createElement("option");
+                    opt.value = v;
+                    opt.innerText = v;
+                    select.appendChild(opt);
+                });
+
+                document.getElementById("reassign-modal").classList.remove("hidden");
+            });
+        }
+
+        function confirmReassignModal() {
+            const select = document.getElementById("reassign-modal-select");
+            const value = select.value;
+            const resolver = reassignModalResolver;
+            reassignModalResolver = null;
+            document.getElementById("reassign-modal").classList.add("hidden");
+            if (resolver) resolver(value);
+        }
+
+        function resolveReassignModal(value) {
+            const resolver = reassignModalResolver;
+            reassignModalResolver = null;
+            document.getElementById("reassign-modal").classList.add("hidden");
+            if (resolver) resolver(value);
+        }
+
         function saveManualBookEntry() {
             const title = document.getElementById("manual-title").value.trim();
             const author = document.getElementById("manual-author").value.trim() || "Unknown Author";
@@ -1409,35 +1486,38 @@
         }
 
         // Populates the header's persistent "current user" dropdown. If the previously
-        // active user no longer exists (e.g. deleted), falls back to no selection.
+        // active user no longer exists (e.g. deleted), falls back to Everyone.
         function renderActiveUserSelectOptions() {
             const select = document.getElementById("active-user-select");
             if (!select) return;
 
-            if (currentActiveUser && !householdMembers.includes(currentActiveUser)) {
-                currentActiveUser = "";
+            if (currentActiveUser !== EVERYONE_USER && !householdMembers.includes(currentActiveUser)) {
+                currentActiveUser = EVERYONE_USER;
                 localStorage.removeItem("librify_active_user");
             }
 
-            select.innerHTML = `<option value="">👤 No user</option>`;
+            select.innerHTML = `<option value="${EVERYONE_USER}">🌐 Everyone</option>`;
             householdMembers.forEach(m => {
                 const opt = document.createElement("option");
                 opt.value = m;
                 opt.innerText = `👤 ${m}`;
                 select.appendChild(opt);
             });
-            select.value = currentActiveUser || "";
+            select.value = currentActiveUser;
         }
 
-        // The active user applies app-wide: it drives the Home tab and filters which
-        // personal tag chips show up when editing a book (global tags + this user's own).
+        // The active user applies app-wide: it drives the Home tab, filters which personal
+        // tag chips show up when editing a book, and which member's personal note shows.
+        // "Everyone" is the default — it sees everything unfiltered.
         function setActiveUser(name) {
-            currentActiveUser = name || "";
-            if (currentActiveUser) localStorage.setItem("librify_active_user", currentActiveUser);
+            currentActiveUser = (name && name !== EVERYONE_USER) ? name : EVERYONE_USER;
+            if (currentActiveUser !== EVERYONE_USER) localStorage.setItem("librify_active_user", currentActiveUser);
             else localStorage.removeItem("librify_active_user");
 
             if (!viewHomeMode.classList.contains("hidden")) renderHomeTab();
             if (currentScannedBook) refreshActiveFormTagChips();
+            if (currentScannedBook) renderNotesSection();
+            filterLocalCatalogCache();
         }
 
         // Personal tags are named "<Member>: <TagName>" — this convention keeps ownership
@@ -1455,8 +1535,58 @@
         // or if it belongs to the current active user. Other members' personal tags are
         // never manageable here — they're preserved as-is at save time regardless.
         function isTagManageable(tagName) {
+            if (currentActiveUser === EVERYONE_USER) return true;
             const owner = tagOwner(tagName);
             return !owner || owner === currentActiveUser;
+        }
+
+        // Notes are stored as a single JSON string in the sheet's Notes column:
+        // { "shared": "...", "<Member>": "...", ... }. This needs no backend/schema
+        // change since it's still just one text cell. Legacy plain-text notes (pre-dating
+        // this feature) are treated as the shared note.
+        function parseNotesField(raw) {
+            if (!raw) return {};
+            try {
+                const obj = JSON.parse(raw);
+                if (obj && typeof obj === "object" && !Array.isArray(obj)) return obj;
+            } catch (e) {}
+            return { shared: raw };
+        }
+
+        function serializeNotesField(obj) {
+            return JSON.stringify(obj);
+        }
+
+        // Renders the notes section of the book detail form based on currentScannedBook.notes
+        // and whichever active user is currently selected. Called on initial form render and
+        // again whenever the active user is switched, without touching the rest of the form.
+        function renderNotesSection() {
+            const container = document.getElementById("notes-section-container");
+            if (!container || !currentScannedBook) return;
+
+            const parsed = parseNotesField(currentScannedBook.notes);
+            const showPersonal = currentActiveUser !== EVERYONE_USER;
+
+            container.innerHTML = `
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Shared Notes</label>
+                    <textarea id="input-notes" rows="3" placeholder="Notes visible to everyone..." class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                ${showPersonal ? `
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">👤 ${currentActiveUser}'s Personal Note</label>
+                    <textarea id="input-member-note" rows="3" placeholder="Only visible to ${currentActiveUser}..." class="w-full bg-indigo-50/40 border border-indigo-100 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                ` : `
+                <p class="text-[10px] text-gray-400 italic">Select a household member (top-left) to add a personal note only they can see.</p>
+                `}
+            `;
+
+            document.getElementById("input-notes").value = parsed.shared || "";
+            if (showPersonal) {
+                const memberField = document.getElementById("input-member-note");
+                if (memberField) memberField.value = parsed[currentActiveUser] || "";
+            }
         }
 
         function addNewHouseholdMember() {
@@ -1566,21 +1696,14 @@
             const usageCount = globalCatalogCache.filter(b => (b.location || "").toString().trim() === removed).length;
 
             if (usageCount > 0) {
-                const proceed = confirm(`"${removed}" is currently used by ${usageCount} book(s). Delete it anyway?`);
-                if (!proceed) return;
-
-                const replacement = prompt(`Optionally enter a replacement location to reassign those ${usageCount} book(s) to.\nLeave blank to just clear their location.`, "");
-                const trimmedReplacement = (replacement || "").trim();
+                const trimmedReplacement = await openReassignModal("location", removed, usageCount);
+                if (trimmedReplacement === undefined) return;
 
                 visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
                 userLocations.splice(i, 1);
 
                 let success;
                 if (trimmedReplacement) {
-                    if (!userLocations.includes(trimmedReplacement)) {
-                        userLocations.push(trimmedReplacement);
-                        visibleDashboardFilters.push(trimmedReplacement);
-                    }
                     success = await cascadeRenameOnServer("location", removed, trimmedReplacement);
                 } else {
                     success = await cascadeClearOnServer("location", removed);
@@ -1730,21 +1853,14 @@
             const usageCount = globalCatalogCache.filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(removed)).length;
 
             if (usageCount > 0) {
-                const proceed = confirm(`"${removed}" is currently used by ${usageCount} book(s). Delete it anyway?`);
-                if (!proceed) return;
-
-                const replacement = prompt(`Optionally enter a replacement tag to reassign those ${usageCount} book(s) to.\nLeave blank to just remove the tag from them.`, "");
-                const trimmedReplacement = (replacement || "").trim();
+                const trimmedReplacement = await openReassignModal("tag", removed, usageCount);
+                if (trimmedReplacement === undefined) return;
 
                 visibleDashboardFilters = visibleDashboardFilters.filter(f => f !== removed);
                 userTags.splice(i, 1);
 
                 let success;
                 if (trimmedReplacement) {
-                    if (!userTags.includes(trimmedReplacement)) {
-                        userTags.push(trimmedReplacement);
-                        visibleDashboardFilters.push(trimmedReplacement);
-                    }
                     success = await cascadeRenameOnServer("tag", removed, trimmedReplacement);
                 } else {
                     success = await cascadeClearOnServer("tag", removed);
@@ -2020,7 +2136,7 @@
                     
                     <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Storage Shelf Location Slot</label><select id="input-location" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium"></select></div>
                     <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Collection Tracking Badges</label><div id="tag-chips-container" class="flex flex-wrap gap-2 pt-1"></div></div>
-                    <div class="space-y-1"><label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Personal Notes</label><textarea id="input-notes" rows="3" placeholder="Anything you want to remember about this copy..." class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea></div>
+                    <div id="notes-section-container" class="space-y-3"></div>
                     
                     <div class="flex gap-2 pt-2">
                         <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer transition-all flex justify-center items-center gap-2">
@@ -2062,6 +2178,7 @@
             refreshActiveFormLocationDropdown(); 
             refreshActiveFormMemberDropdown();
             refreshActiveFormTagChips(); 
+            renderNotesSection();
             const cbl = document.getElementById("copy-buttons-list"); 
             const cbi = document.getElementById("copy-badge-indicator"); 
             
@@ -2126,7 +2243,7 @@
             document.getElementById("input-status").value = c.status || "Available"; 
             document.getElementById("input-borrower").value = c.borrower || "";
             document.getElementById("input-duedate").value = c.dueDate || "";
-            document.getElementById("input-notes").value = c.notes || "";
+            renderNotesSection();
             
             refreshActiveFormTagChips(c.tags || "");
         
@@ -2151,7 +2268,8 @@
             document.getElementById("input-status").value = "Available"; 
             document.getElementById("input-borrower").value = ""; 
             document.getElementById("input-duedate").value = "";
-            document.getElementById("input-notes").value = "";
+            currentScannedBook.notes = "";
+            renderNotesSection();
             currentScannedBook.dateBorrowed = "";
             toggleStatusDependentFields();
             refreshActiveFormTagChips("");
