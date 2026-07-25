@@ -1053,15 +1053,15 @@
             currentScannedBook.tags = [...new Set([...preservedTags, ...selectedManageableTags])].join(", "); 
 
             // Rebuild the notes object: start from whatever was already stored (preserving
-            // any other members' personal notes untouched), then overwrite just the shared
-            // note and the active user's own note from the form.
+            // any personal notes not currently rendered as fields), then overwrite the shared
+            // note and whichever member note field(s) are on screen — one for a specific
+            // active user, or all of them when Everyone is active.
             const notesObj = parseNotesField(currentScannedBook.notes);
             const sharedNotesField = document.getElementById("input-notes");
             if (sharedNotesField) notesObj.shared = sharedNotesField.value;
-            if (currentActiveUser !== EVERYONE_USER) {
-                const memberNoteField = document.getElementById("input-member-note");
-                if (memberNoteField) notesObj[currentActiveUser] = memberNoteField.value;
-            }
+            document.querySelectorAll("#notes-section-container [data-member-note]").forEach(field => {
+                notesObj[field.getAttribute("data-member-note")] = field.value;
+            });
             currentScannedBook.notes = serializeNotesField(notesObj);
             
             const savedBookInstance = { 
@@ -1565,28 +1565,40 @@
             if (!container || !currentScannedBook) return;
 
             const parsed = parseNotesField(currentScannedBook.notes);
-            const showPersonal = currentActiveUser !== EVERYONE_USER;
+            const isEveryone = currentActiveUser === EVERYONE_USER;
+
+            // Everyone gets one labeled, editable field per member; a specific active user
+            // just gets their own. Both cases use the same data-member-note attribute so the
+            // save logic can handle them identically without branching.
+            let personalHTML = "";
+            if (isEveryone) {
+                personalHTML = householdMembers.map(m => `
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">👤 ${m}'s Personal Note</label>
+                        <textarea data-member-note="${m}" rows="2" placeholder="Only visible to ${m}..." class="w-full bg-indigo-50/40 border border-indigo-100 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    </div>
+                `).join("");
+            } else {
+                personalHTML = `
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">👤 ${currentActiveUser}'s Personal Note</label>
+                        <textarea data-member-note="${currentActiveUser}" rows="3" placeholder="Only visible to ${currentActiveUser}..." class="w-full bg-indigo-50/40 border border-indigo-100 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    </div>
+                `;
+            }
 
             container.innerHTML = `
                 <div class="space-y-1">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">Shared Notes</label>
                     <textarea id="input-notes" rows="3" placeholder="Notes visible to everyone..." class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 </div>
-                ${showPersonal ? `
-                <div class="space-y-1">
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">👤 ${currentActiveUser}'s Personal Note</label>
-                    <textarea id="input-member-note" rows="3" placeholder="Only visible to ${currentActiveUser}..." class="w-full bg-indigo-50/40 border border-indigo-100 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
-                ` : `
-                <p class="text-[10px] text-gray-400 italic">Select a household member (top-left) to add a personal note only they can see.</p>
-                `}
+                ${personalHTML}
             `;
 
             document.getElementById("input-notes").value = parsed.shared || "";
-            if (showPersonal) {
-                const memberField = document.getElementById("input-member-note");
-                if (memberField) memberField.value = parsed[currentActiveUser] || "";
-            }
+            container.querySelectorAll("[data-member-note]").forEach(field => {
+                field.value = parsed[field.getAttribute("data-member-note")] || "";
+            });
         }
 
         function addNewHouseholdMember() {
