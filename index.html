@@ -105,7 +105,7 @@
 
             <!-- Global Settings Toggle Button -->
             <button onclick="toggleAppSettingsPanel('global-settings-hub')" class="absolute top-0 right-0 p-2 bg-white hover:bg-gray-100 rounded-xl shadow-2xs transition-colors cursor-pointer text-sm flex items-center gap-1" title="Open Settings Menu">
-                <i data-lucide="settings" class="w-4 h-4"></i> <span class="hidden sm:inline font-semibold text-xs">Settings</span>
+                <i data-lucide="settings" class="w-4 h-4 shrink-0"></i><span class="hidden sm:inline font-semibold text-xs leading-none">Settings</span>
             </button>
         </header>
 
@@ -113,16 +113,16 @@
         <div id="global-settings-hub" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
             <div class="bg-white rounded-2xl shadow-xl max-w-md w-full my-8 flex flex-col max-h-[85vh]">
                 <div class="flex justify-between items-center border-b border-gray-100 p-4 shrink-0">
-                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="settings" class="w-4 h-4"></i> Settings</h2>
+                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="settings" class="w-4 h-4 shrink-0"></i><span class="leading-none">Settings</span></h2>
                     <button onclick="toggleAppSettingsPanel('global-settings-hub')" class="text-gray-400 hover:text-gray-600 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
 
                 <!-- Sub Tabs -->
                 <div class="flex gap-1 px-4 pt-3 pb-3 border-b border-gray-100 shrink-0">
-                    <button id="settings-subtab-members" onclick="switchSettingsSubTab('members')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5"></i> Members</button>
-                    <button id="settings-subtab-locations" onclick="switchSettingsSubTab('locations')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Locations</button>
-                    <button id="settings-subtab-tags" onclick="switchSettingsSubTab('tags')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5"></i> Tags</button>
-                    <button id="settings-subtab-data" onclick="switchSettingsSubTab('data')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5"></i> Data</button>
+                    <button id="settings-subtab-members" onclick="switchSettingsSubTab('members')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Members</span></button>
+                    <button id="settings-subtab-locations" onclick="switchSettingsSubTab('locations')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Locations</span></button>
+                    <button id="settings-subtab-tags" onclick="switchSettingsSubTab('tags')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Tags</span></button>
+                    <button id="settings-subtab-data" onclick="switchSettingsSubTab('data')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Data</span></button>
                 </div>
 
                 <div class="p-4 overflow-y-auto space-y-3">
@@ -156,7 +156,7 @@
                         <div class="flex items-center gap-2">
                             <label class="text-[10px] font-bold text-gray-500 uppercase shrink-0">Assign to:</label>
                             <select id="new-tag-owner-select" class="flex-grow bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="">🌐 Global (everyone)</option>
+                                <option value="">Global (everyone)</option>
                             </select>
                         </div>
                         <div id="tag-library-list" class="flex flex-col gap-1.5 pt-1"></div>
@@ -166,7 +166,7 @@
                     <div id="settings-panel-data" class="space-y-2 hidden">
                         <p class="text-[11px] text-gray-400 italic">Export a backup of your full catalog as a CSV file.</p>
                         <button onclick="exportCatalogToCSV()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                            📥 Export Catalog to CSV Backup
+                            <i data-lucide="download" class="w-4 h-4 shrink-0"></i><span class="leading-none">Export Catalog to CSV Backup</span>
                         </button>
                     </div>
                 </div>
@@ -176,13 +176,13 @@
         <!-- Dynamic Navigation Tabs -->
         <div class="flex bg-gray-200 p-1 rounded-full mb-6">
             <button id="tab-home-mode" onclick="switchAppMode('home')" class="flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="home" class="w-3.5 h-3.5"></i> Home
+                <i data-lucide="home" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Home</span>
             </button>
             <button id="tab-search-mode" onclick="switchAppMode('search')" class="flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="search" class="w-3.5 h-3.5"></i> Search
+                <i data-lucide="search" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Search</span>
             </button>
             <button id="tab-checkout-mode" onclick="switchAppMode('checkout')" class="flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="package" class="w-3.5 h-3.5"></i> Checkout
+                <i data-lucide="package" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Checkout</span>
             </button>
         </div>
 
@@ -276,7 +276,7 @@
             <!-- Per-Borrower Breakdown -->
             <div id="checkout-borrower-summary-card" class="hidden space-y-3">
                 <h3 class="text-sm font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
-                    <i data-lucide="users" class="w-4 h-4"></i> By Borrower
+                    <i data-lucide="users" class="w-4 h-4 shrink-0"></i><span class="leading-none">By Borrower</span>
                 </h3>
                 <div id="checkout-borrower-summary" class="flex flex-wrap gap-2"></div>
             </div>
@@ -284,7 +284,7 @@
             <!-- Checked Out Section -->
             <div class="space-y-3">
                 <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wider flex items-center gap-2">
-                    <i data-lucide="package" class="w-4 h-4"></i> Checked Out
+                    <i data-lucide="package" class="w-4 h-4 shrink-0"></i><span class="leading-none">Checked Out</span>
                 </h3>
                 <div id="checkedout-list-container" class="space-y-3"></div>
             </div>
@@ -301,14 +301,14 @@
 
                 <div class="space-y-3">
                     <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-2">
-                        <i data-lucide="book-open" class="w-4 h-4"></i> Currently Reading
+                        <i data-lucide="book-open" class="w-4 h-4 shrink-0"></i><span class="leading-none">Currently Reading</span>
                     </h3>
                     <div id="home-reading-list-container" class="space-y-3"></div>
                 </div>
 
                 <div class="space-y-3">
                     <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-2">
-                        <i data-lucide="bookmark" class="w-4 h-4"></i> Want to Read
+                        <i data-lucide="bookmark" class="w-4 h-4 shrink-0"></i><span class="leading-none">Want to Read</span>
                     </h3>
                     <div id="home-wanttoread-list-container" class="space-y-3"></div>
                 </div>
@@ -328,7 +328,7 @@
             <button onclick="closeAddBookModal()" class="absolute -top-3 -right-3 bg-white rounded-full w-9 h-9 shadow-lg border border-gray-200 text-gray-500 hover:text-gray-800 font-bold text-lg cursor-pointer z-10 flex items-center justify-center" title="Close">&times;</button>
 
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 space-y-4">
-                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider">📷 Add a Book</h2>
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="camera" class="w-4 h-4 shrink-0"></i><span class="leading-none">Add a Book</span></h2>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <div class="relative flex-grow">
                         <input type="text" id="isbn-input" placeholder="Enter 10 or 13-digit ISBN..." 
@@ -369,7 +369,7 @@
     <div id="manual-entry-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b border-gray-100 pb-2">
-                <h3 class="text-sm font-bold text-gray-800 uppercase">📝 Add Book Manually</h3>
+                <h3 class="text-sm font-bold text-gray-800 uppercase flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4 shrink-0"></i><span class="leading-none">Add Book Manually</span></h3>
                 <button onclick="closeManualBookModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg cursor-pointer">&times;</button>
             </div>
             <div class="space-y-3 text-xs">
@@ -902,7 +902,7 @@
                 const displayCategory = book.categories || book.genre || "General";
         
                 const card = document.createElement("div");
-                card.className = "bg-white p-4 rounded-xl shadow-2xs flex gap-3 items-start text-left cursor-pointer hover:shadow-sm transition-all relative overflow-hidden";
+                card.className = "bg-white/70 hover:bg-white p-4 rounded-xl flex gap-3 items-start text-left cursor-pointer transition-all relative overflow-hidden";
                 if (isOverdue) card.classList.add("border-l-4", "border-l-red-500");
                 else if (isDueSoon) card.classList.add("border-l-4", "border-l-amber-500");
 
@@ -1712,7 +1712,7 @@
                 const row = document.createElement("div");
                 row.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-medium";
                 row.innerHTML = `
-                    <span>👤 ${m}</span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">${m}</span></span>
                     <button onclick="deleteHouseholdMember(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-2 cursor-pointer">&times;</button>
                 `;
                 memberLibraryList.appendChild(row);
@@ -1732,11 +1732,11 @@
                 localStorage.removeItem("librify_active_user");
             }
 
-            select.innerHTML = `<option value="${EVERYONE_USER}">🌐 Everyone</option>`;
+            select.innerHTML = `<option value="${EVERYONE_USER}">Everyone</option>`;
             householdMembers.forEach(m => {
                 const opt = document.createElement("option");
                 opt.value = m;
-                opt.innerText = `👤 ${m}`;
+                opt.innerText = m;
                 select.appendChild(opt);
             });
             select.value = currentActiveUser;
@@ -1810,7 +1810,7 @@
             if (isEveryone) {
                 personalHTML = householdMembers.map(m => `
                     <div class="space-y-1">
-                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">👤 ${m}'s Personal Note</label>
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">${m}'s Personal Note</span></label>
                         <textarea data-member-note="${m}" rows="2" placeholder="Only visible to ${m}..." class="w-full bg-indigo-50/40 border border-indigo-100 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                     </div>
                 `).join("");
@@ -1917,9 +1917,9 @@
                 row.innerHTML = `
                     <label class="flex items-center gap-2 cursor-pointer flex-grow">
                         <input type="checkbox" ${isPinned ? 'checked' : ''} onchange="toggleDashboardFilterVisibility('${l.replace(/'/g, "\\'")}', this.checked)" class="accent-indigo-600 rounded">
-                        <span>📍 ${l}</span>
+                        <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">${l}</span></span>
                     </label>
-                    <button onclick="renameCustomUserLocation(${i})" title="Rename" class="text-gray-400 hover:text-indigo-600 font-bold px-1 cursor-pointer">✏️</button>
+                    <button onclick="renameCustomUserLocation(${i})" title="Rename" class="text-gray-400 hover:text-indigo-600 px-1 cursor-pointer"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
                     <button onclick="deleteCustomUserLocation(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-1 cursor-pointer">&times;</button>
                 `; 
                 locationLibraryList.appendChild(row); 
@@ -2021,11 +2021,11 @@
             const select = document.getElementById("new-tag-owner-select");
             if (!select) return;
             const prevVal = select.value;
-            select.innerHTML = `<option value="">🌐 Global (everyone)</option>`;
+            select.innerHTML = `<option value="">Global (everyone)</option>`;
             householdMembers.forEach(m => {
                 const opt = document.createElement("option");
                 opt.value = m;
-                opt.innerText = `👤 ${m}`;
+                opt.innerText = m;
                 select.appendChild(opt);
             });
             if ([...select.options].some(o => o.value === prevVal)) select.value = prevVal;
@@ -2060,17 +2060,17 @@
                     row.innerHTML = `
                         <label class="flex items-center gap-2 cursor-pointer flex-grow">
                             <input type="checkbox" ${isPinned ? 'checked' : ''} onchange="toggleDashboardFilterVisibility('${tag.replace(/'/g, "\\'")}', this.checked)" class="accent-indigo-600 rounded">
-                            <span>🏷️ ${label}</span>
+                            <span class="flex items-center gap-1.5"><i data-lucide="tag" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">${label}</span></span>
                         </label>
-                        <button onclick="renameCustomUserTag(${index})" title="Rename" class="text-gray-400 hover:text-indigo-600 font-bold px-1 cursor-pointer">✏️</button>
+                        <button onclick="renameCustomUserTag(${index})" title="Rename" class="text-gray-400 hover:text-indigo-600 px-1 cursor-pointer"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
                         <button onclick="deleteCustomUserTag(${index})" class="text-gray-400 hover:text-red-500 font-bold px-1 ml-1 cursor-pointer">&times;</button>
                     `; 
                     tagLibraryList.appendChild(row); 
                 });
             }
 
-            renderTagGroup("🌐 Global", groups.global);
-            householdMembers.forEach(m => renderTagGroup(`👤 ${m}`, groups[m]));
+            renderTagGroup("Global", groups.global);
+            householdMembers.forEach(m => renderTagGroup(m, groups[m]));
 
             renderQuickFilterPillsModule(); 
         }
@@ -2346,7 +2346,7 @@
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="book-marked" class="w-3.5 h-3.5"></i> Book Details</h3>
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="book-marked" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Book Details</span></h3>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase">Publisher${missingBadge(currentScannedBook.publisher)}</label>
