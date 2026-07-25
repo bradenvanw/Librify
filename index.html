@@ -628,6 +628,25 @@
             filterLocalCatalogCache();
         }
 
+        // Flags a field as "missing" if it's empty or one of the known placeholder
+        // strings the app has used historically (N/A, Unknown Author, etc.) — used to
+        // nudge the user to fill in gaps left by an imperfect API match.
+        function isMissingValue(v) {
+            if (v === null || v === undefined) return true;
+            const s = v.toString().trim();
+            if (s === "") return true;
+            const placeholders = ["n/a", "unknown author", "unknown title", "general reading", "general", "no description available."];
+            return placeholders.includes(s.toLowerCase());
+        }
+
+        function missingFieldClass(v) {
+            return isMissingValue(v) ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200";
+        }
+
+        function missingBadge(v) {
+            return isMissingValue(v) ? `<span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded ml-1">⚠️ missing — add it?</span>` : '';
+        }
+
         function checkItemOverdueStatus(dueDateString) {
             if (!dueDateString) return false;
             const dueDate = new Date(dueDateString);
@@ -1025,6 +1044,17 @@
         
             const statusValue = document.getElementById("input-status").value;
             currentScannedBook.uniqueId = selectedUniqueId; 
+
+            currentScannedBook.title = document.getElementById("input-title").value.trim() || "Untitled Book";
+            currentScannedBook.subtitle = document.getElementById("input-subtitle").value.trim();
+            currentScannedBook.authors = document.getElementById("input-authors").value.trim() || "Unknown Author";
+            currentScannedBook.publisher = document.getElementById("input-publisher").value.trim();
+            currentScannedBook.publishedDate = document.getElementById("input-publisheddate").value.trim();
+            currentScannedBook.pageCount = document.getElementById("input-pagecount").value.trim();
+            currentScannedBook.categories = document.getElementById("input-categories").value.trim();
+            currentScannedBook.genre = currentScannedBook.categories.split(",")[0]?.trim() || "General Reading";
+            currentScannedBook.description = document.getElementById("input-description").value.trim();
+
             currentScannedBook.location = document.getElementById("input-location").value; 
             currentScannedBook.status = statusValue; 
             
@@ -2091,15 +2121,7 @@
         function renderIntegratedLayout() { 
             openBookDetailModal();
             const coverUrl = currentScannedBook.coverImage || currentScannedBook.thumbnail || FALLBACK_COVER;
-            const subtitleHTML = currentScannedBook.subtitle ? `<p class="text-xs text-gray-500 italic -mt-1 leading-tight">${currentScannedBook.subtitle}</p>` : '';
-            const descriptionHTML = currentScannedBook.description ? `<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-xs text-gray-600 leading-relaxed text-left"><span class="font-bold text-gray-400 block text-[9px] uppercase tracking-wider mb-1">Synopsis</span>${currentScannedBook.description}</div>` : '';
 
-            let displayYear = "N/A";
-            if (currentScannedBook.publishedDate) {
-                const yearMatch = currentScannedBook.publishedDate.toString().match(/\d{4}/);
-                if (yearMatch) displayYear = yearMatch[0];
-            }
-            
             const isCopyOverdue = currentScannedBook.status === "Checked Out" && checkItemOverdueStatus(currentScannedBook.dueDate);
             const isCopyDueSoon = currentScannedBook.status === "Checked Out" && !isCopyOverdue && checkItemDueSoonStatus(currentScannedBook.dueDate);
 
@@ -2113,18 +2135,43 @@
                 ${overdueBannerHTML}
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
                     <div class="w-24 h-36 sm:w-32 sm:h-44 shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-xs border border-gray-100">
-                        <img src="${coverUrl}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
+                        <img id="book-cover-img" src="${coverUrl}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
                     </div>
-                    <div class="space-y-1 sm:space-y-2 flex-grow min-w-0 text-left">
-                        <h2 class="text-base sm:text-xl font-bold text-gray-900 leading-snug truncate">${currentScannedBook.title}</h2>${subtitleHTML}
-                        <p class="text-xs sm:text-sm font-medium text-indigo-600 truncate">by ${currentScannedBook.authors}</p>
-                        <div class="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
-                            <span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-semibold truncate max-w-[110px]">${currentScannedBook.categories || currentScannedBook.genre || "General"}</span>
-                            <span>•</span>
-                            <span>📅 ${displayYear}</span>
-                            <span>•</span>
-                            <span>📖 ${currentScannedBook.pageCount || 'N/A'} pgs</span>
-                            ${currentScannedBook.dataSource === "openlibrary" ? `<span class="text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>` : ''}
+                    <div class="space-y-2 flex-grow min-w-0 text-left">
+                        ${currentScannedBook.dataSource === "openlibrary" ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>` : ''}
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Title${missingBadge(currentScannedBook.title)}</label>
+                            <input type="text" id="input-title" class="w-full text-base sm:text-xl font-bold text-gray-900 bg-transparent border-b-2 ${isMissingValue(currentScannedBook.title) ? 'border-amber-300' : 'border-transparent'} focus:border-indigo-400 focus:outline-none py-0.5">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Subtitle</label>
+                            <input type="text" id="input-subtitle" placeholder="(optional)" class="w-full text-xs text-gray-500 italic bg-transparent border-b border-transparent focus:border-indigo-400 focus:outline-none py-0.5">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Author(s)${missingBadge(currentScannedBook.authors)}</label>
+                            <input type="text" id="input-authors" class="w-full text-xs sm:text-sm font-medium text-indigo-600 bg-transparent border-b-2 ${isMissingValue(currentScannedBook.authors) ? 'border-amber-300' : 'border-transparent'} focus:border-indigo-400 focus:outline-none py-0.5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">📚 Book Details</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Publisher${missingBadge(currentScannedBook.publisher)}</label>
+                            <input type="text" id="input-publisher" class="w-full border rounded-lg p-2 text-xs ${missingFieldClass(currentScannedBook.publisher)}">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Published${missingBadge(currentScannedBook.publishedDate)}</label>
+                            <input type="text" id="input-publisheddate" placeholder="e.g. 2019 or 2019-11-05" class="w-full border rounded-lg p-2 text-xs ${missingFieldClass(currentScannedBook.publishedDate)}">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Page Count${missingBadge(currentScannedBook.pageCount)}</label>
+                            <input type="number" min="0" id="input-pagecount" class="w-full border rounded-lg p-2 text-xs ${missingFieldClass(currentScannedBook.pageCount)}">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Categories${missingBadge(currentScannedBook.categories)}</label>
+                            <input type="text" id="input-categories" placeholder="Comma-separated" class="w-full border rounded-lg p-2 text-xs ${missingFieldClass(currentScannedBook.categories)}">
                         </div>
                     </div>
                 </div>
@@ -2178,9 +2225,29 @@
                     </div>
                 </div>
 
-                ${descriptionHTML}
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-left space-y-1">
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Synopsis${missingBadge(currentScannedBook.description)}</label>
+                    <textarea id="input-description" rows="4" class="w-full text-xs text-gray-600 leading-relaxed border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${missingFieldClass(currentScannedBook.description)}"></textarea>
+                </div>
             `; 
+            populateBookDetailFields();
             setupFormInteractions(); 
+        }
+
+        // Sets the values of the newly-editable core fields from currentScannedBook.
+        // Uses .value assignment (not string interpolation) to avoid any HTML-injection
+        // risk from book descriptions/titles containing quotes or markup.
+        function populateBookDetailFields() {
+            const coverImg = document.getElementById("book-cover-img");
+            if (coverImg) coverImg.src = currentScannedBook.coverImage || currentScannedBook.thumbnail || FALLBACK_COVER;
+            document.getElementById("input-title").value = isMissingValue(currentScannedBook.title) ? "" : currentScannedBook.title;
+            document.getElementById("input-subtitle").value = currentScannedBook.subtitle || "";
+            document.getElementById("input-authors").value = isMissingValue(currentScannedBook.authors) ? "" : currentScannedBook.authors;
+            document.getElementById("input-publisher").value = isMissingValue(currentScannedBook.publisher) ? "" : currentScannedBook.publisher;
+            document.getElementById("input-publisheddate").value = isMissingValue(currentScannedBook.publishedDate) ? "" : currentScannedBook.publishedDate;
+            document.getElementById("input-pagecount").value = isMissingValue(currentScannedBook.pageCount) ? "" : currentScannedBook.pageCount;
+            document.getElementById("input-categories").value = isMissingValue(currentScannedBook.categories) ? "" : currentScannedBook.categories;
+            document.getElementById("input-description").value = isMissingValue(currentScannedBook.description) ? "" : currentScannedBook.description;
         }
         
         function toggleStatusDependentFields() {
@@ -2266,6 +2333,15 @@
             currentScannedBook.status = c.status || "Available";
             currentScannedBook.tags = c.tags || "";
             currentScannedBook.notes = c.notes || "";
+            currentScannedBook.title = c.title || currentScannedBook.title;
+            currentScannedBook.subtitle = c.subtitle || "";
+            currentScannedBook.authors = c.authors || currentScannedBook.authors;
+            currentScannedBook.publisher = c.publisher || "";
+            currentScannedBook.publishedDate = c.publishedDate || "";
+            currentScannedBook.pageCount = c.pageCount || "";
+            currentScannedBook.categories = c.categories || "";
+            currentScannedBook.description = c.description || "";
+            populateBookDetailFields();
             
             document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; 
         
