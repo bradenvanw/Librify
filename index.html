@@ -591,8 +591,20 @@
         // dozens of places, a MutationObserver on the whole page automatically converts
         // any new placeholders into real SVG icons — no need to call lucide.createIcons()
         // manually after every render.
+        // IMPORTANT: lucide.createIcons() itself mutates the DOM (replacing placeholders
+        // with real <svg> elements), which would otherwise re-trigger this same observer
+        // and could spiral given how often this app re-renders content. Disconnecting
+        // while it runs, and debouncing rapid-fire mutations (e.g. typing in search) into
+        // a single refresh, keeps this cheap and loop-safe.
+        let iconRefreshTimer = null;
         const iconObserver = new MutationObserver(() => {
-            if (window.lucide) lucide.createIcons();
+            if (!window.lucide) return;
+            clearTimeout(iconRefreshTimer);
+            iconRefreshTimer = setTimeout(() => {
+                iconObserver.disconnect();
+                lucide.createIcons();
+                iconObserver.observe(document.body, { childList: true, subtree: true });
+            }, 60);
         });
         iconObserver.observe(document.body, { childList: true, subtree: true });
         if (window.lucide) lucide.createIcons();
