@@ -187,9 +187,9 @@
         </div>
 
         <!-- ================= SEARCH MODE VIEW ================= -->
-        <div id="view-search-mode" class="hidden space-y-4">
+        <div id="view-search-mode" class="hidden space-y-5">
             <!-- Global Analytics Dashboard Component -->
-            <div id="analytics-dashboard-panel" class="grid grid-cols-4 gap-2 bg-white/70 rounded-2xl p-4 text-center">
+            <div id="analytics-dashboard-panel" class="grid grid-cols-4 gap-2 text-center">
                 <div class="p-1">
                     <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Titles</span>
                     <span id="stat-total-titles" class="text-lg font-black text-indigo-600">0</span>
@@ -208,7 +208,7 @@
                 </div>
             </div>
 
-            <div class="bg-white/70 rounded-2xl p-5 space-y-3">
+            <div class="space-y-3">
                 <div class="flex gap-2">
                     <input type="text" id="library-search-query" oninput="filterLocalCatalogCache()" placeholder="Title, author, category, or ISBN..." 
                         class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
@@ -249,7 +249,7 @@
                     <div id="quick-filter-pills-row" class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar select-none"></div>
                 </div>
 
-                <div id="search-status-message" class="text-xs text-gray-400 italic border-t border-gray-200/60 pt-2">Loading your library database...</div>
+                <div id="search-status-message" class="text-xs text-gray-400 italic pt-1">Loading your library database...</div>
             </div>
 
             <div id="search-results-list" class="space-y-3"></div>
@@ -258,7 +258,7 @@
         <!-- ================= CHECKOUT MODE VIEW ================= -->
         <div id="view-checkout-mode" class="hidden space-y-6">
             <!-- Checkout Summary Stats -->
-            <div class="grid grid-cols-3 gap-2 bg-white/70 rounded-2xl p-4 text-center">
+            <div class="grid grid-cols-3 gap-2 text-center">
                 <div class="p-1">
                     <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Checked Out</span>
                     <span id="checkout-stat-total" class="text-lg font-black text-amber-600">0</span>
@@ -622,22 +622,22 @@
             viewCheckoutMode.classList.add("hidden");
             viewHomeMode.classList.add("hidden");
 
-            tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
-            tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
-            tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
+            tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5";
+            tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5";
+            tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5";
 
             if (mode === 'checkout') {
                 viewCheckoutMode.classList.remove("hidden");
-                tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
+                tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all flex items-center justify-center gap-1.5";
                 renderCheckoutTab();
             } else if (mode === 'search') {
                 viewSearchMode.classList.remove("hidden");
-                tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
+                tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all flex items-center justify-center gap-1.5";
                 renderQuickFilterPillsModule();
                 if (globalCatalogCache.length === 0) fetchAllBooksFromGoogleSheet();
             } else {
                 viewHomeMode.classList.remove("hidden");
-                tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
+                tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all flex items-center justify-center gap-1.5";
                 renderHomeTab();
             }
         }
@@ -1697,8 +1697,8 @@
 
         function switchSettingsSubTab(tab) {
             const tabs = ['members', 'locations', 'tags', 'data'];
-            const activeClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full bg-indigo-600 text-white cursor-pointer transition-all";
-            const inactiveClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer transition-all";
+            const activeClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full bg-indigo-600 text-white cursor-pointer transition-all flex items-center justify-center gap-1";
+            const inactiveClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer transition-all flex items-center justify-center gap-1";
 
             tabs.forEach(t => {
                 document.getElementById(`settings-panel-${t}`).classList.toggle("hidden", t !== tab);
