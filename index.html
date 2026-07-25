@@ -189,6 +189,7 @@
                             <option value="author-asc">Author (A – Z)</option>
                             <option value="year-desc">Published (Newest)</option>
                             <option value="year-asc">Published (Oldest)</option>
+                            <option value="series">Series (grouped, in order)</option>
                         </select>
                     </div>
                 </div>
@@ -780,6 +781,22 @@
                     const yA = parseInt((a.publishedDate || "").toString().match(/\d{4}/) || [0]);
                     const yB = parseInt((b.publishedDate || "").toString().match(/\d{4}/) || [0]);
                     return yA - yB;
+                } else if (sortOrder === "series") {
+                    const sA = (a.seriesName || "").trim();
+                    const sB = (b.seriesName || "").trim();
+                    if (!sA && !sB) return (a.title || "").toLowerCase().localeCompare((b.title || "").toLowerCase());
+                    if (!sA) return 1;
+                    if (!sB) return -1;
+                    const seriesCompare = sA.toLowerCase().localeCompare(sB.toLowerCase());
+                    if (seriesCompare !== 0) return seriesCompare;
+                    const nA = parseFloat(a.seriesNumber);
+                    const nB = parseFloat(b.seriesNumber);
+                    const validA = !isNaN(nA);
+                    const validB = !isNaN(nB);
+                    if (validA && validB) return nA - nB;
+                    if (validA) return -1;
+                    if (validB) return 1;
+                    return (a.title || "").toLowerCase().localeCompare((b.title || "").toLowerCase());
                 } else {
                     return (a.title || "").toLowerCase().localeCompare((b.title || "").toLowerCase());
                 }
@@ -850,6 +867,7 @@
                         <div>
                             <h4 class="text-xs font-bold text-gray-900 truncate leading-tight">${book.title || 'Untitled Book'}</h4>
                             <p class="text-[11px] font-medium text-gray-500 truncate">by ${book.authors || 'Unknown Author'}</p>
+                            ${book.seriesName ? `<p class="text-[10px] font-semibold text-indigo-600 truncate">📚 ${book.seriesName}${book.seriesNumber ? ` #${book.seriesNumber}` : ''}</p>` : ''}
                         </div>
                         
                         <div class="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
@@ -1057,6 +1075,8 @@
             currentScannedBook.pageCount = document.getElementById("input-pagecount").value.trim();
             currentScannedBook.categories = document.getElementById("input-categories").value.trim();
             currentScannedBook.genre = currentScannedBook.categories.split(",")[0]?.trim() || "General Reading";
+            currentScannedBook.seriesName = document.getElementById("input-seriesname").value.trim();
+            currentScannedBook.seriesNumber = document.getElementById("input-seriesnumber").value.trim();
             currentScannedBook.description = document.getElementById("input-description").value.trim();
 
             currentScannedBook.location = document.getElementById("input-location").value; 
@@ -1463,7 +1483,9 @@
                 dateBorrowed: "", 
                 dueDate: "", 
                 reader: "",
-                dataSource: item._source || "googlebooks"
+                dataSource: item._source || "googlebooks",
+                seriesName: item._seriesName || "",
+                seriesNumber: ""
             }; 
 
             // If this selection resolves a barcode that didn't match anything on its own,
@@ -1556,7 +1578,9 @@
                 dimensions: "N/A",
                 dateBorrowed: "",
                 dueDate: "",
-                reader: ""
+                reader: "",
+                seriesName: "",
+                seriesNumber: ""
             };
 
             closeManualBookModal();
@@ -2247,6 +2271,7 @@
                             <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Author(s)${missingBadge(currentScannedBook.authors)}</label>
                             <input type="text" id="input-authors" class="w-full text-xs sm:text-sm font-medium text-indigo-600 bg-transparent border-b-2 ${isMissingValue(currentScannedBook.authors) ? 'border-amber-300' : 'border-transparent'} focus:border-indigo-400 focus:outline-none py-0.5">
                         </div>
+                        ${currentScannedBook.seriesName ? `<span class="inline-block text-[9px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">📚 ${currentScannedBook.seriesName}${currentScannedBook.seriesNumber ? ` #${currentScannedBook.seriesNumber}` : ''}</span>` : ''}
                     </div>
                 </div>
 
@@ -2268,6 +2293,14 @@
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase">Categories${missingBadge(currentScannedBook.categories)}</label>
                             <input type="text" id="input-categories" placeholder="Comma-separated" class="w-full border rounded-lg p-2 text-xs ${missingFieldClass(currentScannedBook.categories)}">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Series Name</label>
+                            <input type="text" id="input-seriesname" placeholder="e.g. Mistborn" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-xs">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Book # in Series</label>
+                            <input type="text" id="input-seriesnumber" placeholder="e.g. 3" class="w-full border border-gray-200 bg-gray-50 rounded-lg p-2 text-xs">
                         </div>
                     </div>
                 </div>
@@ -2343,6 +2376,8 @@
             document.getElementById("input-publisheddate").value = isMissingValue(currentScannedBook.publishedDate) ? "" : currentScannedBook.publishedDate;
             document.getElementById("input-pagecount").value = isMissingValue(currentScannedBook.pageCount) ? "" : currentScannedBook.pageCount;
             document.getElementById("input-categories").value = isMissingValue(currentScannedBook.categories) ? "" : currentScannedBook.categories;
+            document.getElementById("input-seriesname").value = currentScannedBook.seriesName || "";
+            document.getElementById("input-seriesnumber").value = currentScannedBook.seriesNumber || "";
             document.getElementById("input-description").value = isMissingValue(currentScannedBook.description) ? "" : currentScannedBook.description;
         }
         
@@ -2437,6 +2472,8 @@
             currentScannedBook.pageCount = c.pageCount || "";
             currentScannedBook.categories = c.categories || "";
             currentScannedBook.description = c.description || "";
+            currentScannedBook.seriesName = c.seriesName || "";
+            currentScannedBook.seriesNumber = c.seriesNumber || "";
             populateBookDetailFields();
             
             document.getElementById("copy-badge-indicator").innerText = `Modifying: Copy ${i + 1} (${selectedUniqueId})`; 
