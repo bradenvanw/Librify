@@ -9,12 +9,58 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#2D5F4C">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- html5-qrcode STABLE production library dependency -->
     <script src="https://unpkg.com/html5-qrcode@2.3.4/html5-qrcode.min.js" type="text/javascript"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @theme {
+            /* Warm literary palette in place of default Tailwind indigo/gray — every
+               existing bg-indigo-*, text-indigo-*, border-indigo-*, focus:ring-indigo-*
+               class in the app inherits this automatically. */
+            --color-indigo-50: #EAF2ED;
+            --color-indigo-100: #D3E4DA;
+            --color-indigo-200: #A9CAB7;
+            --color-indigo-300: #7FAE94;
+            --color-indigo-400: #5A8F73;
+            --color-indigo-500: #3D7259;
+            --color-indigo-600: #2D5F4C;
+            --color-indigo-700: #234A3B;
+            --color-indigo-800: #1B3A2F;
+            --color-indigo-900: #142B23;
+
+            --color-gray-50: #FAF7F0;
+            --color-gray-100: #F3EFE4;
+            --color-gray-200: #E8E2D3;
+            --color-gray-300: #D9D1BE;
+            --color-gray-400: #B5AC97;
+            --color-gray-500: #8B8478;
+            --color-gray-600: #6B655A;
+            --color-gray-700: #4A453D;
+            --color-gray-800: #2A2622;
+            --color-gray-900: #1C1915;
+
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-serif: 'Fraunces', Georgia, serif;
+
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.375rem;
+
+            --shadow-2xs: 0 1px 2px rgba(42, 38, 34, 0.04);
+            --shadow-xs: 0 1px 3px rgba(42, 38, 34, 0.05), 0 1px 2px rgba(42, 38, 34, 0.04);
+            --shadow-sm: 0 2px 8px rgba(42, 38, 34, 0.06), 0 1px 3px rgba(42, 38, 34, 0.04);
+            --shadow-md: 0 4px 14px rgba(42, 38, 34, 0.08), 0 2px 4px rgba(42, 38, 34, 0.04);
+            --shadow-lg: 0 10px 30px rgba(42, 38, 34, 0.10), 0 4px 8px rgba(42, 38, 34, 0.05);
+            --shadow-xl: 0 20px 45px rgba(42, 38, 34, 0.14), 0 8px 16px rgba(42, 38, 34, 0.06);
+        }
+        .font-serif { font-family: var(--font-serif); }
+    </style>
     <style>
         #interactive-reader {
             width: 100% !important;
@@ -46,13 +92,13 @@
     <div class="max-w-xl mx-auto p-4 sm:p-6">
         <!-- Header -->
         <header class="text-center my-6 relative">
-            <h1 class="text-3xl font-extrabold text-indigo-600 tracking-tight">Librify</h1>
+            <h1 class="text-3xl font-serif font-semibold text-indigo-600 tracking-tight">Librify</h1>
             <p class="text-sm text-gray-500 mt-1">Search your collection, scan a barcode, or manage parameters</p>
             
             <!-- Active User Selector -->
             <div class="absolute top-0 left-0">
                 <select id="active-user-select" onchange="setActiveUser(this.value)" title="Current user" class="p-2 bg-white hover:bg-gray-100 rounded-xl border border-gray-200 shadow-2xs transition-colors cursor-pointer text-sm font-semibold text-gray-700 max-w-[110px] sm:max-w-none">
-                    <option value="">👤 No user</option>
+                    <option value="">🌐 Everyone</option>
                 </select>
             </div>
 
@@ -72,10 +118,10 @@
 
                 <!-- Sub Tabs -->
                 <div class="flex gap-1 px-4 pt-3 pb-3 border-b border-gray-100 shrink-0">
-                    <button id="settings-subtab-members" onclick="switchSettingsSubTab('members')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition-all">👥 Members</button>
-                    <button id="settings-subtab-locations" onclick="switchSettingsSubTab('locations')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition-all">📍 Locations</button>
-                    <button id="settings-subtab-tags" onclick="switchSettingsSubTab('tags')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition-all">🏷️ Tags</button>
-                    <button id="settings-subtab-data" onclick="switchSettingsSubTab('data')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition-all">💾 Data</button>
+                    <button id="settings-subtab-members" onclick="switchSettingsSubTab('members')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all">👥 Members</button>
+                    <button id="settings-subtab-locations" onclick="switchSettingsSubTab('locations')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all">📍 Locations</button>
+                    <button id="settings-subtab-tags" onclick="switchSettingsSubTab('tags')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all">🏷️ Tags</button>
+                    <button id="settings-subtab-data" onclick="switchSettingsSubTab('data')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all">💾 Data</button>
                 </div>
 
                 <div class="p-4 overflow-y-auto space-y-3">
@@ -127,14 +173,14 @@
         </div>
 
         <!-- Dynamic Navigation Tabs -->
-        <div class="flex bg-gray-200 p-1 rounded-xl mb-6">
-            <button id="tab-home-mode" onclick="switchAppMode('home')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer transition-all">
+        <div class="flex bg-gray-200 p-1 rounded-full mb-6">
+            <button id="tab-home-mode" onclick="switchAppMode('home')" class="flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all">
                 🏠 Home
             </button>
-            <button id="tab-search-mode" onclick="switchAppMode('search')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all">
+            <button id="tab-search-mode" onclick="switchAppMode('search')" class="flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all">
                 🔍 Search
             </button>
-            <button id="tab-checkout-mode" onclick="switchAppMode('checkout')" class="flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all">
+            <button id="tab-checkout-mode" onclick="switchAppMode('checkout')" class="flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all">
                 📦 Checkout
             </button>
         </div>
@@ -250,7 +296,7 @@
             </div>
 
             <div id="home-member-content" class="space-y-6 hidden">
-                <h2 id="home-member-heading" class="text-lg font-bold text-gray-800"></h2>
+                <h2 id="home-member-heading" class="text-lg font-serif font-semibold text-gray-800"></h2>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
                     <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-2">
@@ -269,7 +315,7 @@
         </div>
 
         <!-- ================= FLOATING ADD BOOK BUTTON ================= -->
-        <button id="fab-add-book" onclick="openAddBookModal()" title="Add a Book" class="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-3xl font-light shadow-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105 leading-none">
+        <button id="fab-add-book" onclick="openAddBookModal()" title="Add a Book" class="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-3xl font-light shadow-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105 active:scale-95 leading-none">
             <span class="-mt-0.5">+</span>
         </button>
 
@@ -552,22 +598,22 @@
             viewCheckoutMode.classList.add("hidden");
             viewHomeMode.classList.add("hidden");
 
-            tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
-            tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
-            tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
+            tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
+            tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
+            tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all";
 
             if (mode === 'checkout') {
                 viewCheckoutMode.classList.remove("hidden");
-                tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
+                tabCheckoutMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
                 renderCheckoutTab();
             } else if (mode === 'search') {
                 viewSearchMode.classList.remove("hidden");
-                tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
+                tabSearchMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
                 renderQuickFilterPillsModule();
                 if (globalCatalogCache.length === 0) fetchAllBooksFromGoogleSheet();
             } else {
                 viewHomeMode.classList.remove("hidden");
-                tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
+                tabHomeMode.className = "flex-1 text-center py-2 text-xs font-bold rounded-full bg-white text-gray-800 shadow-xs cursor-pointer transition-all";
                 renderHomeTab();
             }
         }
@@ -860,12 +906,12 @@
                 }
         
                 card.innerHTML = `
-                    <div class="w-14 h-20 bg-gray-50 border border-gray-100 rounded-md overflow-hidden shrink-0 shadow-2xs">
+                    <div class="w-14 h-20 bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg overflow-hidden shrink-0 shadow-sm ring-1 ring-black/5">
                         <img src="${displayCover}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
                     </div>
                     <div class="flex-grow min-w-0 space-y-1">
                         <div>
-                            <h4 class="text-xs font-bold text-gray-900 truncate leading-tight">${book.title || 'Untitled Book'}</h4>
+                            <h4 class="text-xs font-serif font-semibold text-gray-900 truncate leading-tight">${book.title || 'Untitled Book'}</h4>
                             <p class="text-[11px] font-medium text-gray-500 truncate">by ${book.authors || 'Unknown Author'}</p>
                             ${book.seriesName ? `<p class="text-[10px] font-semibold text-indigo-600 truncate">📚 ${book.seriesName}${book.seriesNumber ? ` #${book.seriesNumber}` : ''}</p>` : ''}
                         </div>
@@ -1306,11 +1352,11 @@
                         const card = document.createElement("div");
                         card.className = "bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex gap-3 items-center text-left hover:border-indigo-400 cursor-pointer transition-all";
                         card.innerHTML = `
-                            <div class="w-12 h-16 bg-gray-50 border border-gray-100 rounded-md overflow-hidden shrink-0">
+                            <div class="w-12 h-16 bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg overflow-hidden shrink-0 shadow-sm ring-1 ring-black/5">
                                 <img src="${cover}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
                             </div>
                             <div class="flex-grow min-w-0">
-                                <h4 class="text-xs font-bold text-gray-900 truncate">${title}</h4>
+                                <h4 class="text-xs font-serif font-semibold text-gray-900 truncate">${title}</h4>
                                 <p class="text-[11px] text-gray-500 truncate">by ${authors}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">📅 ${year} • 📖 ${vol.pageCount || 'N/A'} pgs</p>
                                 ${sourceBadge}
@@ -1627,8 +1673,8 @@
 
         function switchSettingsSubTab(tab) {
             const tabs = ['members', 'locations', 'tags', 'data'];
-            const activeClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg bg-indigo-600 text-white cursor-pointer transition-all";
-            const inactiveClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer transition-all";
+            const activeClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full bg-indigo-600 text-white cursor-pointer transition-all";
+            const inactiveClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer transition-all";
 
             tabs.forEach(t => {
                 document.getElementById(`settings-panel-${t}`).classList.toggle("hidden", t !== tab);
@@ -2254,14 +2300,14 @@
             bookResult.innerHTML = `
                 ${overdueBannerHTML}
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
-                    <div class="w-24 h-36 sm:w-32 sm:h-44 shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-xs border border-gray-100">
+                    <div class="w-24 h-36 sm:w-32 sm:h-44 shrink-0 bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-md ring-1 ring-black/5">
                         <img id="book-cover-img" src="${coverUrl}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
                     </div>
                     <div class="space-y-2 flex-grow min-w-0 text-left">
                         ${currentScannedBook.dataSource === "openlibrary" ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>` : ''}
                         <div>
                             <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Title${missingBadge(currentScannedBook.title)}</label>
-                            <input type="text" id="input-title" class="w-full text-base sm:text-xl font-bold text-gray-900 bg-transparent border-b-2 ${isMissingValue(currentScannedBook.title) ? 'border-amber-300' : 'border-transparent'} focus:border-indigo-400 focus:outline-none py-0.5">
+                            <input type="text" id="input-title" class="w-full text-base sm:text-xl font-serif font-semibold text-gray-900 bg-transparent border-b-2 ${isMissingValue(currentScannedBook.title) ? 'border-amber-300' : 'border-transparent'} focus:border-indigo-400 focus:outline-none py-0.5">
                         </div>
                         <div>
                             <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Subtitle</label>
@@ -2345,10 +2391,10 @@
                     <div id="notes-section-container" class="space-y-3"></div>
                     
                     <div class="flex gap-2 pt-2">
-                        <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm shadow-sm cursor-pointer transition-all flex justify-center items-center gap-2">
+                        <button id="submit-to-sheet-btn" onclick="submitDataToGoogleSheets()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-semibold py-3 rounded-full text-sm shadow-sm cursor-pointer transition-all flex justify-center items-center gap-2">
                             <span>Confirm & Sync Data Records</span>
                         </button>
-                        <button id="delete-book-btn" onclick="deleteBookRecord()" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold px-4 py-3 rounded-xl text-sm transition-all cursor-pointer border border-red-200 flex items-center justify-center gap-1 shrink-0">
+                        <button id="delete-book-btn" onclick="deleteBookRecord()" class="bg-red-50 hover:bg-red-100 active:scale-[0.98] text-red-600 font-semibold px-4 py-3 rounded-full text-sm transition-all cursor-pointer border border-red-200 flex items-center justify-center gap-1 shrink-0">
                             <span>🗑️ Delete</span>
                         </button>
                     </div>
