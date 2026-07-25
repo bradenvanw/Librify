@@ -1089,6 +1089,13 @@
                     body: JSON.stringify(savedBookInstance) 
                 }); 
                 const resData = await response.json();
+
+                if (resData.status === "error") {
+                    showStatus(`Save failed: ${resData.message || "Unknown error"}. Nothing was lost — try again.`, "error");
+                    renderIntegratedLayout();
+                    return;
+                }
+
                 if (resData.uniqueId) savedBookInstance.uniqueId = resData.uniqueId;
         
                 showStatus(`Successfully updated catalog: "${savedBookInstance.title}"`, "success"); 
