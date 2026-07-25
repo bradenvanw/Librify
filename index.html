@@ -1230,6 +1230,7 @@
                         const title = vol.title || "Unknown Title";
                         const authors = vol.authors ? vol.authors.join(", ") : "Unknown Author";
                         const year = vol.publishedDate ? (vol.publishedDate.match(/\d{4}/) || ["N/A"])[0] : "N/A";
+                        const sourceBadge = item._source === "openlibrary" ? `<span class="inline-block mt-0.5 text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>` : '';
         
                         const card = document.createElement("div");
                         card.className = "bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex gap-3 items-center text-left hover:border-indigo-400 cursor-pointer transition-all";
@@ -1241,6 +1242,7 @@
                                 <h4 class="text-xs font-bold text-gray-900 truncate">${title}</h4>
                                 <p class="text-[11px] text-gray-500 truncate">by ${authors}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">📅 ${year} • 📖 ${vol.pageCount || 'N/A'} pgs</p>
+                                ${sourceBadge}
                             </div>
                             <button class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-indigo-200 shrink-0 cursor-pointer transition-colors">
                                 Select
@@ -1343,7 +1345,8 @@
                 dimensions: "N/A", 
                 dateBorrowed: "", 
                 dueDate: "", 
-                reader: ""
+                reader: "",
+                dataSource: item._source || "googlebooks"
             }; 
             
             showStatus("Book profile selected!", "success"); 
@@ -2121,6 +2124,7 @@
                             <span>📅 ${displayYear}</span>
                             <span>•</span>
                             <span>📖 ${currentScannedBook.pageCount || 'N/A'} pgs</span>
+                            ${currentScannedBook.dataSource === "openlibrary" ? `<span class="text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>` : ''}
                         </div>
                     </div>
                 </div>
