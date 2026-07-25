@@ -992,10 +992,16 @@
                 wantToReadBooks.forEach(book => {
                     const item = document.createElement("div");
                     item.className = "flex items-center justify-between bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 text-xs cursor-pointer hover:border-emerald-300 transition-colors";
+                    let subline = `<p class="text-emerald-700 font-medium">by ${book.authors || 'Unknown Author'}</p>`;
+                    if (isEveryone) {
+                        const bookTags = (book.tags || "").toString().split(",").map(t => t.trim());
+                        const wanters = householdMembers.filter(m => bookTags.includes(wantToReadTagFor(m)));
+                        subline = `<p class="text-emerald-700 font-medium">Wanted by: <b>${wanters.join(', ') || 'Unknown'}</b></p>`;
+                    }
                     item.innerHTML = `
                         <div>
                             <p class="font-bold text-gray-900">${book.title}</p>
-                            <p class="text-emerald-700 font-medium">by ${book.authors || 'Unknown Author'}</p>
+                            ${subline}
                         </div>
                         <button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white border border-emerald-200 px-2.5 py-1 rounded-lg font-bold text-emerald-700 cursor-pointer hover:bg-emerald-50 transition-colors">Manage</button>
                     `;
