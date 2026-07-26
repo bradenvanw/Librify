@@ -1790,7 +1790,7 @@
 
             menu.innerHTML = "";
             menu.appendChild(menuRow(EVERYONE_USER, "Everyone", `<span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0"><i data-lucide="globe" class="w-3.5 h-3.5"></i></span>`));
-            householdMembers.forEach(m => {
+            householdMembers.filter(m => m && typeof m === "string" && m.trim() !== "").forEach(m => {
                 menu.appendChild(menuRow(m, m, `<span class="w-6 h-6 rounded-full ${avatarColorForMember(m)} text-white text-[10px] font-bold flex items-center justify-center shrink-0">${m.charAt(0).toUpperCase()}</span>`));
             });
         }
