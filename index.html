@@ -99,7 +99,7 @@
             <!-- Active User Selector -->
             <div class="absolute top-0 left-0">
                 <select id="active-user-select" onchange="setActiveUser(this.value)" title="Current user" class="p-2 bg-white hover:bg-gray-100 rounded-xl shadow-2xs transition-colors cursor-pointer text-sm font-semibold text-gray-700 max-w-[110px] sm:max-w-none">
-                    <option value="">🌐 Everyone</option>
+                    <option value="">Everyone</option>
                 </select>
             </div>
 
@@ -644,30 +644,30 @@
 
         function renderQuickFilterPillsModule() {
             quickFilterPillsRow.innerHTML = "";
-            const allBtn = createPillElement("✨ Show All", "");
+            const allBtn = createPillElement("sparkles", "Show All", "");
             if (activeSelectedCategoryFilter === "") allBtn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
             quickFilterPillsRow.appendChild(allBtn);
 
             userLocations.forEach(loc => {
                 if (!visibleDashboardFilters.includes(loc)) return;
-                const btn = createPillElement(`📍 ${loc}`, loc);
+                const btn = createPillElement("map-pin", loc, loc);
                 if (activeSelectedCategoryFilter === loc) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
             });
 
             userTags.forEach(tag => {
                 if (!visibleDashboardFilters.includes(tag)) return;
-                const btn = createPillElement(`🏷️ ${tag}`, tag);
+                const btn = createPillElement("tag", tag, tag);
                 if (activeSelectedCategoryFilter === tag) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
             });
         }
 
-        function createPillElement(label, filterVal) {
+        function createPillElement(iconName, label, filterVal) {
             const btn = document.createElement("button");
             btn.type = "button";
-            btn.className = "quick-filter-pill px-3 py-1 bg-gray-50 text-gray-600 border border-gray-200 text-xs font-medium rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center shrink-0";
-            btn.innerText = label;
+            btn.className = "quick-filter-pill px-3 py-1 bg-gray-50 text-gray-600 border border-gray-200 text-xs font-medium rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 shrink-0";
+            btn.innerHTML = (iconName ? `<i data-lucide="${iconName}" class="w-3 h-3 shrink-0"></i>` : '') + `<span class="leading-none">${label}</span>`;
             btn.onclick = () => selectQuickFilterPill(btn, filterVal);
             return btn;
         }
@@ -719,7 +719,7 @@
         }
 
         function missingBadge(v) {
-            return isMissingValue(v) ? `<span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded ml-1">⚠️ missing — add it?</span>` : '';
+            return isMissingValue(v) ? `<span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded ml-1 inline-flex items-center gap-0.5"><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i>missing — add it?</span>` : '';
         }
 
         function checkItemOverdueStatus(dueDateString) {
@@ -786,13 +786,13 @@
                 const booksList = responseData.data || responseData.books || (Array.isArray(responseData) ? responseData : null);
         
                 if (!booksList) {
-                    searchStatusMessage.innerHTML = "⚠️ Unrecognized response format from Google Apps Script.";
+                    searchStatusMessage.innerHTML = '<i data-lucide="alert-triangle" class="w-3 h-3 inline shrink-0"></i> Unrecognized response format from Google Apps Script.';
                     runDatabaseAnalyticsEngine();
                     return;
                 }
         
                 if (booksList.length === 0) {
-                    searchStatusMessage.innerHTML = "✅ Database connected (0 books).";
+                    searchStatusMessage.innerHTML = '<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Database connected (0 books).';
                     globalCatalogCache = [];
                     filterLocalCatalogCache();
                     runDatabaseAnalyticsEngine();
@@ -802,13 +802,13 @@
                 }
                 
                 globalCatalogCache = booksList;
-                searchStatusMessage.innerText = `✅ Database synchronized: ${globalCatalogCache.length} books loaded.`;
+                searchStatusMessage.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Database synchronized: ${globalCatalogCache.length} books loaded.`;
                 filterLocalCatalogCache();
                 runDatabaseAnalyticsEngine();
                 if (!viewCheckoutMode.classList.contains("hidden")) renderCheckoutTab();
                 if (!viewHomeMode.classList.contains("hidden")) renderHomeMemberContent();
             } catch(e) {
-                searchStatusMessage.innerHTML = `❌ Connection Failed: ${e.message}`;
+                searchStatusMessage.innerHTML = `<i data-lucide="x-circle" class="w-3 h-3 inline shrink-0"></i> Connection Failed: ${e.message}`;
                 runDatabaseAnalyticsEngine();
             }
         }
@@ -1044,9 +1044,9 @@
             noMembersMsg.classList.add("hidden");
             memberContent.classList.remove("hidden");
 
-            document.getElementById("home-member-heading").innerText = (currentActiveUser === EVERYONE_USER)
-                ? `🌐 Everyone's Home`
-                : `👋 ${currentActiveUser}'s Home`;
+            document.getElementById("home-member-heading").innerHTML = (currentActiveUser === EVERYONE_USER)
+                ? `<i data-lucide="globe" class="w-5 h-5 inline-block align-text-bottom mr-1"></i>Everyone's Home`
+                : `<i data-lucide="user" class="w-5 h-5 inline-block align-text-bottom mr-1"></i>${currentActiveUser}'s Home`;
 
             renderHomeMemberContent();
         }
@@ -1244,7 +1244,7 @@
             const deleteBtn = document.getElementById("delete-book-btn");
             if (deleteBtn) {
                 deleteBtn.disabled = true;
-                deleteBtn.innerText = "⏳ Deleting...";
+                deleteBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span class="leading-none">Deleting...</span>';
             }
 
             showStatus("Deleting record...", "info");
@@ -1271,14 +1271,14 @@
                     showStatus(`Delete failed: ${resData.message}`, "error");
                     if (deleteBtn) {
                         deleteBtn.disabled = false;
-                        deleteBtn.innerText = "🗑️ Delete";
+                        deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i><span class="leading-none">Delete</span>';
                     }
                 }
             } catch (err) {
                 showStatus(`Error deleting book: ${err.message}`, "error");
                 if (deleteBtn) {
                     deleteBtn.disabled = false;
-                    deleteBtn.innerText = "🗑️ Delete";
+                    deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i><span class="leading-none">Delete</span>';
                 }
             }
         }
@@ -1383,7 +1383,7 @@
                             <div class="flex-grow min-w-0">
                                 <h4 class="text-xs font-serif font-semibold text-gray-900 truncate">${title}</h4>
                                 <p class="text-[11px] text-gray-500 truncate">by ${authors}</p>
-                                <p class="text-[10px] text-gray-400 mt-0.5">📅 ${year} • 📖 ${vol.pageCount || 'N/A'} pgs</p>
+                                <p class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2"><span class="flex items-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5"></i>${year}</span><span class="flex items-center gap-0.5"><i data-lucide="file-text" class="w-2.5 h-2.5"></i>${vol.pageCount || 'N/A'} pgs</span></p>
                                 ${sourceBadge}
                             </div>
                             <button class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-indigo-200 shrink-0 cursor-pointer transition-colors">
@@ -1420,7 +1420,7 @@
                 bookResult.innerHTML = `
                     <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-2xs space-y-3 text-left">
                         <div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
-                            <span>🔍</span> Barcode Unrecognized
+                            <i data-lucide="search" class="w-4 h-4 shrink-0"></i> Barcode Unrecognized
                         </div>
                         <p class="text-xs text-gray-600">We couldn't find a book matching ISBN <code class="bg-gray-100 px-1 py-0.5 rounded font-mono text-gray-800">${cleanIsbn}</code>. Try searching by title or author instead:</p>
                         <div class="flex gap-2 pt-1">
@@ -1818,7 +1818,7 @@
             } else {
                 personalHTML = `
                     <div class="space-y-1">
-                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider">👤 ${currentActiveUser}'s Personal Note</label>
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">${currentActiveUser}'s Personal Note</span></label>
                         <textarea data-member-note="${currentActiveUser}" rows="3" placeholder="Only visible to ${currentActiveUser}..." class="w-full bg-indigo-50/40 border border-indigo-100 rounded-lg p-2.5 text-xs font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                     </div>
                 `;
@@ -2179,7 +2179,7 @@
                 b.type = "button"; 
                 b.setAttribute("data-val", t); 
                 b.className = isS ? "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer" : "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"; 
-                b.innerText = isS ? `🏷️ ${t}` : `➕ ${t}`; 
+                b.innerHTML = isS ? `<i data-lucide="tag" class="w-3 h-3 inline shrink-0"></i> ${t}` : `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${t}`; 
                 b.onclick = () => toggleChipState(b); 
                 c.appendChild(b); 
             }); 
@@ -2287,7 +2287,7 @@
         function onScanFailure(e) {}
 
         function renderScanNextButtonState() { 
-            actionBtnContainer.innerHTML = `<button id="scan-next-btn" onclick="prepareNextScanSession()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">⚡ <span>Scan Next Book</span></button>`; 
+            actionBtnContainer.innerHTML = `<button id="scan-next-btn" onclick="prepareNextScanSession()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><i data-lucide="zap" class="w-4 h-4 shrink-0"></i><span class="leading-none">Scan Next Book</span></button>`; 
         }
 
         function prepareNextScanSession() { 
@@ -2305,8 +2305,8 @@
             c.classList.toggle("bg-indigo-600"); 
             c.classList.toggle("text-white"); 
             c.classList.toggle("border-indigo-600"); 
-            if (c.classList.contains("bg-indigo-600")) c.innerText = `🏷️ ${c.getAttribute("data-val")}`; 
-            else c.innerText = `➕ ${c.getAttribute("data-val")}`; 
+            if (c.classList.contains("bg-indigo-600")) c.innerHTML = `<i data-lucide="tag" class="w-3 h-3 inline shrink-0"></i> ${c.getAttribute("data-val")}`; 
+            else c.innerHTML = `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${c.getAttribute("data-val")}`; 
         }
 
         function renderIntegratedLayout() { 
@@ -2487,11 +2487,11 @@
                     btn.type = "button"; 
                     btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white shadow-xs cursor-pointer"; 
                     
-                    let statusEmoji = "🟢";
-                    if (copy.status === "Checked Out") statusEmoji = "🔴";
-                    else if (copy.status === "Currently Reading") statusEmoji = "📖";
+                    let statusDotClass = "bg-indigo-500";
+                    if (copy.status === "Checked Out") statusDotClass = "bg-red-500";
+                    else if (copy.status === "Currently Reading") statusDotClass = "bg-amber-500";
 
-                    btn.innerText = `Copy ${idx + 1} ${statusEmoji}`; 
+                    btn.innerHTML = `Copy ${idx + 1} <span class="inline-block w-1.5 h-1.5 rounded-full ${statusDotClass} align-middle"></span>`; 
                     btn.onclick = () => loadSelectedCopyProfile(idx); 
                     cbl.appendChild(btn); 
                 }); 
