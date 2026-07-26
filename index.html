@@ -98,8 +98,9 @@
             
             <!-- Active User Selector -->
             <div class="absolute top-0 left-0" id="active-user-switcher-wrap">
-                <button id="active-user-button" onclick="toggleUserSwitcherMenu()" title="Current user: Everyone" class="p-1.5 bg-white hover:bg-gray-100 rounded-full shadow-2xs transition-colors cursor-pointer flex items-center justify-center">
+                <button id="active-user-button" onclick="toggleUserSwitcherMenu()" title="Current user: Everyone" class="p-1.5 sm:pr-3 bg-white hover:bg-gray-100 rounded-full shadow-2xs transition-colors cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                     <span id="active-user-avatar" class="w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center shrink-0"><i data-lucide="globe" class="w-4 h-4"></i></span>
+                    <span id="active-user-label" class="hidden sm:inline font-semibold text-xs leading-none truncate max-w-[100px]">Everyone</span>
                 </button>
                 <div id="active-user-menu" class="hidden absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-lg py-1.5 min-w-[160px] z-40"></div>
             </div>
@@ -1734,22 +1735,28 @@
         function updateActiveUserButton() {
             const avatar = document.getElementById("active-user-avatar");
             const button = document.getElementById("active-user-button");
+            const label = document.getElementById("active-user-label");
             if (!avatar || !button) return;
 
             if (currentActiveUser === EVERYONE_USER) {
                 avatar.className = "w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center shrink-0";
                 avatar.innerHTML = `<i data-lucide="globe" class="w-4 h-4"></i>`;
                 button.title = "Current user: Everyone";
+                if (label) label.innerText = "Everyone";
             } else {
                 avatar.className = `w-7 h-7 rounded-full ${avatarColorForMember(currentActiveUser)} text-white text-xs font-bold flex items-center justify-center shrink-0`;
                 avatar.innerText = currentActiveUser.charAt(0).toUpperCase();
                 button.title = `Current user: ${currentActiveUser}`;
+                if (label) label.innerText = currentActiveUser;
             }
         }
 
         function toggleUserSwitcherMenu() {
             const menu = document.getElementById("active-user-menu");
             if (!menu) return;
+            if (menu.classList.contains("hidden")) {
+                renderActiveUserSelectOptions();
+            }
             menu.classList.toggle("hidden");
         }
 
