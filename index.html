@@ -99,7 +99,7 @@
             <!-- Active User Selector -->
             <div class="absolute top-0 left-0" id="active-user-switcher-wrap">
                 <button id="active-user-button" onclick="toggleUserSwitcherMenu(event)" title="Current user: Everyone" class="p-2 bg-white hover:bg-gray-100 rounded-full shadow-2xs transition-colors cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                    <span id="active-user-avatar" class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0"><i data-lucide="globe" class="w-3 h-3"></i></span>
+                    <span id="active-user-avatar" class="w-4 h-4 rounded-full bg-indigo-600 text-white text-[8px] font-bold flex items-center justify-center shrink-0"><i data-lucide="globe" class="w-2.5 h-2.5"></i></span>
                     <span id="active-user-label" class="hidden sm:inline font-semibold text-xs leading-none truncate max-w-[100px]">Everyone</span>
                 </button>
                 <div id="active-user-menu" class="hidden absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-lg py-1.5 min-w-[160px] z-40"></div>
@@ -1722,6 +1722,7 @@
             });
             renderTagOwnerSelectOptions();
             renderActiveUserSelectOptions();
+            updateActiveUserButton();
         }
 
         // Cycles a small set of palette colors across household members so each gets a
@@ -1739,12 +1740,12 @@
             if (!avatar || !button) return;
 
             if (currentActiveUser === EVERYONE_USER) {
-                avatar.className = "w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0";
-                avatar.innerHTML = `<i data-lucide="globe" class="w-3 h-3"></i>`;
+                avatar.className = "w-4 h-4 rounded-full bg-indigo-600 text-white text-[8px] font-bold flex items-center justify-center shrink-0";
+                avatar.innerHTML = `<i data-lucide="globe" class="w-2.5 h-2.5"></i>`;
                 button.title = "Current user: Everyone";
                 if (label) label.innerText = "Everyone";
             } else {
-                avatar.className = `w-5 h-5 rounded-full ${avatarColorForMember(currentActiveUser)} text-white text-[10px] font-bold flex items-center justify-center shrink-0`;
+                avatar.className = `w-4 h-4 rounded-full ${avatarColorForMember(currentActiveUser)} text-white text-[8px] font-bold flex items-center justify-center shrink-0`;
                 avatar.innerText = currentActiveUser.charAt(0).toUpperCase();
                 button.title = `Current user: ${currentActiveUser}`;
                 if (label) label.innerText = currentActiveUser;
@@ -1798,8 +1799,6 @@
             householdMembers.forEach(m => {
                 menu.appendChild(menuRow(m, m, `<span class="w-5 h-5 rounded-full ${avatarColorForMember(m)} text-white text-[9px] font-bold flex items-center justify-center shrink-0">${m.charAt(0).toUpperCase()}</span>`));
             });
-
-            updateActiveUserButton();
         }
 
         // The active user applies app-wide: it drives the Home tab, filters which personal
