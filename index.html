@@ -2778,27 +2778,17 @@
                     formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ] 
                 }; 
                 try {
-                    // Requesting continuous autofocus helps a lot with how quickly the camera
-                    // re-settles on a close-up barcode after a fresh stream starts, which is
-                    // exactly the moment (right after Rapid Scan reopens the camera) where
-                    // blur is most noticeable. Support for this varies by device/browser —
-                    // some reject the constraint outright, so we fall back to the plain
-                    // constraint if that happens rather than risk a hard camera failure.
-                    await html5QrcodeScanner.start({ facingMode: "environment", advanced: [{ focusMode: "continuous" }] }, config, onScanSuccess, onScanFailure);
+                    await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
                 } catch (err) {
-                    try {
-                        await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
-                    } catch (err2) {
-                        console.error("Camera start failed:", err2);
-                        const errName = err2 && err2.name ? err2.name : "";
-                        let hint = "Camera failure.";
-                        if (errName === "NotAllowedError") hint = "Camera permission denied — check your browser/site camera permissions.";
-                        else if (errName === "NotFoundError") hint = "No camera found on this device.";
-                        else if (errName === "NotReadableError") hint = "Camera is busy or already in use by another app/tab.";
-                        else if (errName === "OverconstrainedError") hint = "Camera doesn't support the requested settings.";
-                        else if (err2 && err2.message) hint = `Camera failure: ${err2.message}`;
-                        showScanStatus(hint, "error");
-                    }
+                    console.error("Camera start failed:", err);
+                    const errName = err && err.name ? err.name : "";
+                    let hint = "Camera failure.";
+                    if (errName === "NotAllowedError") hint = "Camera permission denied — check your browser/site camera permissions.";
+                    else if (errName === "NotFoundError") hint = "No camera found on this device.";
+                    else if (errName === "NotReadableError") hint = "Camera is busy or already in use by another app/tab.";
+                    else if (errName === "OverconstrainedError") hint = "Camera doesn't support the requested settings.";
+                    else if (err && err.message) hint = `Camera failure: ${err.message}`;
+                    showScanStatus(hint, "error");
                 }
             } finally {
                 scannerTransitioning = false;
