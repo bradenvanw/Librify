@@ -377,6 +377,27 @@
                     </button>
                 </div>
 
+                <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                            <i data-lucide="zap" class="w-3.5 h-3.5 shrink-0"></i>
+                            <span class="leading-none">Quick Add — auto-save clean matches, skip review</span>
+                        </span>
+                        <input type="checkbox" id="quick-add-checkbox" onchange="toggleQuickAddMode(this.checked)" class="accent-indigo-600 rounded w-4 h-4 shrink-0">
+                    </label>
+                    <div id="quick-add-defaults" class="hidden space-y-2 pt-1">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Default location for scanned books</label>
+                            <select id="quick-add-location-select" onchange="quickAddDefaultLocation = this.value" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs font-medium"></select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Default tags (optional)</label>
+                            <div id="quick-add-tags-chips" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 italic">Anything ambiguous (multiple possible matches, or an unrecognized barcode) still opens for review — Quick Add only skips it for clean, confident matches.</p>
+                    </div>
+                </div>
+
                 <div id="scanner-section" class="max-h-0 opacity-0 overflow-hidden border-gray-200 rounded-2xl bg-gray-50 transition-all duration-300 ease-in-out">
                     <div class="p-3">
                         <div id="interactive-reader" class="w-full mx-auto"></div>
@@ -543,6 +564,9 @@
         // we can remember "this barcode = this book" for future scans.
         let pendingAliasSourceIsbn = null;
         let bulkEditMode = false;
+        let quickAddMode = false;
+        let quickAddDefaultLocation = "";
+        let quickAddDefaultTags = [];
         let bulkSelectedUniqueIds = new Set();
         let globalCatalogCache = []; 
         let activeSelectedCategoryFilter = ""; 
@@ -1567,7 +1591,7 @@
                 if (searchResults && searchResults.items && searchResults.items.length > 0) { 
                     // If exact ISBN match with 1 item, select directly
                     if (cleanIsbn && searchResults.items.length === 1 && !isNaN(rawInput)) {
-                        selectCandidateBook(searchResults.items[0], cleanIsbn);
+                        selectCandidateBook(searchResults.items[0], cleanIsbn, true);
                         return;
                     }
         
@@ -1744,7 +1768,7 @@
         }
         
         // Helper function to build the book profile once selected
-        function selectCandidateBook(item, fallbackIsbn) {
+        function selectCandidateBook(item, fallbackIsbn, isAutoMatch = false) {
             const vol = item.volumeInfo || {};
             const identifiers = vol.industryIdentifiers || [];
             const foundIsbn = identifiers.find(id => id.type === "ISBN_13" || id.type === "ISBN_10")?.identifier || fallbackIsbn || `MANUAL-${Date.now()}`;
@@ -1783,6 +1807,13 @@
                 linkIsbnAliasOnServer(pendingAliasSourceIsbn, foundIsbn);
             }
             pendingAliasSourceIsbn = null;
+
+            // Quick Add: only for a confident single-match scan, never for a book the user
+            // had to manually pick out of several candidates — that case still needs review.
+            if (quickAddMode && isAutoMatch) {
+                autoSaveQuickAddBook({ ...currentScannedBook });
+                return;
+            }
             
             showStatus("Book profile selected!", "success"); 
             renderIntegratedLayout(); 
@@ -2484,12 +2515,96 @@
 
         function openAddBookModal() {
             addBookModal.classList.remove("hidden");
+            populateQuickAddDefaultsUI();
         }
 
         function closeAddBookModal() {
             stopScanning();
             addBookModal.classList.add("hidden");
             isbnInput.value = "";
+        }
+
+        function toggleQuickAddMode(checked) {
+            quickAddMode = checked;
+            document.getElementById("quick-add-defaults").classList.toggle("hidden", !quickAddMode);
+        }
+
+        function populateQuickAddDefaultsUI() {
+            const locSelect = document.getElementById("quick-add-location-select");
+            if (locSelect) {
+                const prev = quickAddDefaultLocation;
+                locSelect.innerHTML = "";
+                userLocations.forEach(loc => {
+                    const opt = document.createElement("option");
+                    opt.value = loc;
+                    opt.innerText = loc;
+                    locSelect.appendChild(opt);
+                });
+                if (userLocations.includes(prev)) locSelect.value = prev;
+                else quickAddDefaultLocation = locSelect.value || "";
+            }
+
+            const tagsContainer = document.getElementById("quick-add-tags-chips");
+            if (tagsContainer) {
+                tagsContainer.innerHTML = "";
+                userTags.filter(t => isTagManageable(t)).forEach(t => {
+                    const isSelected = quickAddDefaultTags.includes(t);
+                    const b = document.createElement("button");
+                    b.type = "button";
+                    b.className = isSelected
+                        ? "tag-chip bg-indigo-600 text-white border border-indigo-600 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer"
+                        : "tag-chip bg-white text-gray-600 border border-gray-200 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer";
+                    b.innerHTML = isSelected ? `<i data-lucide="tag" class="w-3 h-3 inline shrink-0"></i> ${t}` : `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${t}`;
+                    b.onclick = () => {
+                        if (quickAddDefaultTags.includes(t)) quickAddDefaultTags = quickAddDefaultTags.filter(x => x !== t);
+                        else quickAddDefaultTags.push(t);
+                        populateQuickAddDefaultsUI();
+                    };
+                    tagsContainer.appendChild(b);
+                });
+            }
+        }
+
+        // Saves a scanned book immediately with the Quick Add defaults, with no review
+        // screen — only used for a confident single-match scan (see selectCandidateBook).
+        async function autoSaveQuickAddBook(bookData) {
+            closeBookDetailModal(); // dismiss the spinner modal — no review screen for Quick Add
+
+            const payload = {
+                action: "saveBook",
+                token: SHARED_SECRET,
+                ...bookData,
+                uniqueId: `${bookData.isbn}-1`,
+                status: "Available",
+                location: quickAddDefaultLocation || "",
+                tags: quickAddDefaultTags.join(", "),
+                borrower: "",
+                dueDate: "",
+                reader: "",
+                dateBorrowed: "",
+                notes: "",
+                coverImage: bookData.coverImage || bookData.thumbnail || ""
+            };
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    showScanStatus(`Quick Add failed for "${bookData.title}": ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+
+                appendSessionHistoryLog(payload);
+                showScanStatus(`Added: "${payload.title}" — ready for the next scan.`, "success");
+                fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showScanStatus(`Quick Add error: ${err.message}`, "error");
+            }
         }
         
         function toggleScanner() { 
