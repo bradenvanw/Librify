@@ -800,7 +800,7 @@
         }
 
         async function fetchAllBooksFromGoogleSheet() {
-            searchStatusMessage.innerHTML = "⏳ Syncing with live catalog database...";
+            searchStatusMessage.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 inline shrink-0 animate-spin"></i> Syncing with live catalog database...';
             
             try {
                 const cacheBuster = `&_cb=${new Date().getTime()}`;
@@ -1157,7 +1157,7 @@
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.classList.add("opacity-50", "cursor-not-allowed");
-                submitBtn.innerText = "⏳ Saving & Syncing...";
+                submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span class="leading-none">Saving & Syncing...</span>';
             }
         
             const statusValue = document.getElementById("input-status").value;
