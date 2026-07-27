@@ -2778,7 +2778,15 @@
                 try {
                     await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
                 } catch (err2) {
-                    showScanStatus("Camera failure.", "error");
+                    console.error("Camera start failed:", err2);
+                    const errName = err2 && err2.name ? err2.name : "";
+                    let hint = "Camera failure.";
+                    if (errName === "NotAllowedError") hint = "Camera permission denied — check your browser/site camera permissions.";
+                    else if (errName === "NotFoundError") hint = "No camera found on this device.";
+                    else if (errName === "NotReadableError") hint = "Camera is busy or already in use by another app/tab.";
+                    else if (errName === "OverconstrainedError") hint = "Camera doesn't support the requested settings.";
+                    else if (err2 && err2.message) hint = `Camera failure: ${err2.message}`;
+                    showScanStatus(hint, "error");
                 }
             }
         }
