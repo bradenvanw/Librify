@@ -2747,9 +2747,6 @@
             try {
                 // If a previous scanning session is still active or wasn't fully cleaned up,
                 // stop and clear it and wait for that to finish before starting a new one.
-                // Starting a fresh session before the camera is actually released is a common
-                // cause of a scanner needing to be opened/closed a couple of times before it
-                // actually catches a barcode.
                 if (html5QrcodeScanner) {
                     try {
                         if (html5QrcodeScanner.isScanning) {
@@ -2759,6 +2756,14 @@
                     } catch (e) {}
                     html5QrcodeScanner = null;
                 }
+
+                // Give the camera hardware a moment to actually finish releasing, even
+                // though the JS-level stop() promise already resolved — on many phones the
+                // underlying camera takes a little longer to truly free up than the promise
+                // takes to settle, and starting immediately (a common case is Rapid Scan's
+                // auto-restart, which can follow a stop very quickly) is what was causing
+                // "already under transition" here.
+                await new Promise(resolve => setTimeout(resolve, 400));
 
                 const re = document.getElementById("interactive-reader"); 
                 if (re) re.innerHTML = ""; 
