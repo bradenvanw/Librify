@@ -344,10 +344,30 @@
             </div>
         </div>
 
-        <!-- ================= FLOATING ADD BOOK BUTTON ================= -->
-        <button id="fab-add-book" onclick="openAddBookModal()" title="Add a Book" class="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105 active:scale-95">
-            <i data-lucide="plus" class="w-6 h-6"></i>
-        </button>
+        <!-- ================= FLOATING ADD BOOK BUTTON (SPEED DIAL) ================= -->
+        <div class="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
+            <div id="fab-options" class="hidden flex-col items-end gap-3">
+                <button onclick="startFabAction('manual')" class="flex items-center gap-2.5 cursor-pointer group">
+                    <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Add Manually</span>
+                    <span class="w-11 h-11 rounded-full bg-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="edit-3" class="w-4 h-4 text-gray-700"></i></span>
+                </button>
+                <button onclick="startFabAction('lookup')" class="flex items-center gap-2.5 cursor-pointer group">
+                    <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Lookup by Title/Author</span>
+                    <span class="w-11 h-11 rounded-full bg-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="search" class="w-4 h-4 text-gray-700"></i></span>
+                </button>
+                <button onclick="startFabAction('rapid')" class="flex items-center gap-2.5 cursor-pointer group">
+                    <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Rapid Scan</span>
+                    <span class="w-11 h-11 rounded-full bg-amber-500 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="zap" class="w-4 h-4 text-white"></i></span>
+                </button>
+                <button onclick="startFabAction('scan')" class="flex items-center gap-2.5 cursor-pointer group">
+                    <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Scan</span>
+                    <span class="w-11 h-11 rounded-full bg-indigo-600 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="camera" class="w-4 h-4 text-white"></i></span>
+                </button>
+            </div>
+            <button id="fab-add-book" onclick="toggleFabMenu()" title="Add a Book" class="w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg cursor-pointer flex items-center justify-center transition-all hover:scale-105 active:scale-95">
+                <i data-lucide="plus" id="fab-main-icon" class="w-6 h-6 transition-transform duration-200"></i>
+            </button>
+        </div>
 
     </div>
 
@@ -2522,6 +2542,55 @@
             stopScanning();
             addBookModal.classList.add("hidden");
             isbnInput.value = "";
+            isbnInput.placeholder = "Enter 10 or 13-digit ISBN...";
+        }
+
+        function toggleFabMenu() {
+            const options = document.getElementById("fab-options");
+            const mainIcon = document.getElementById("fab-main-icon");
+            const isOpen = options.classList.contains("flex");
+            options.classList.toggle("hidden", isOpen);
+            options.classList.toggle("flex", !isOpen);
+            mainIcon.classList.toggle("rotate-45", !isOpen);
+        }
+
+        function closeFabMenu() {
+            const options = document.getElementById("fab-options");
+            const mainIcon = document.getElementById("fab-main-icon");
+            options.classList.add("hidden");
+            options.classList.remove("flex");
+            mainIcon.classList.remove("rotate-45");
+        }
+
+        // Handles the four speed-dial entry points. "Scan" and "Rapid Scan" share the
+        // same Add Book modal and just differ in whether Quick Add is pre-enabled —
+        // Rapid Scan is really just "Quick Add, opened straight into the camera."
+        function startFabAction(action) {
+            closeFabMenu();
+
+            if (action === "manual") {
+                openManualBookModal();
+                return;
+            }
+
+            openAddBookModal();
+
+            if (action === "lookup") {
+                document.getElementById("quick-add-checkbox").checked = false;
+                toggleQuickAddMode(false);
+                isbnInput.placeholder = "Search by title or author...";
+                isbnInput.focus();
+                return;
+            }
+
+            if (action === "rapid") {
+                document.getElementById("quick-add-checkbox").checked = true;
+                toggleQuickAddMode(true);
+            } else {
+                document.getElementById("quick-add-checkbox").checked = false;
+                toggleQuickAddMode(false);
+            }
+            toggleScanner();
         }
 
         function toggleQuickAddMode(checked) {
@@ -2600,8 +2669,9 @@
                 }
 
                 appendSessionHistoryLog(payload);
-                showScanStatus(`Added: "${payload.title}" — ready for the next scan.`, "success");
                 fetchAllBooksFromGoogleSheet();
+                showScanStatus(`Added: "${payload.title}" — reopening camera...`, "success");
+                prepareNextScanSession();
             } catch (err) {
                 showScanStatus(`Quick Add error: ${err.message}`, "error");
             }
