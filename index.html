@@ -90,7 +90,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen pb-12">
 
-    <div class="max-w-xl mx-auto p-4 sm:p-6">
+    <div class="max-w-xl md:max-w-3xl lg:max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
         <!-- Header -->
         <header class="text-center my-6 relative">
             <h1 class="text-3xl font-serif font-semibold text-indigo-600 tracking-tight">Librify</h1>
@@ -120,7 +120,7 @@
 
         <!-- ================= GLOBAL SETTINGS MENU HUB ================= -->
         <div id="global-settings-hub" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
-            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full my-8 flex flex-col max-h-[85vh]">
+            <div class="bg-white rounded-2xl shadow-xl max-w-md lg:max-w-xl w-full my-8 flex flex-col max-h-[85vh]">
                 <div class="flex justify-between items-center border-b border-gray-100 p-4 shrink-0">
                     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="settings" class="w-4 h-4 shrink-0"></i><span class="leading-none">Settings</span></h2>
                     <button onclick="toggleAppSettingsPanel('global-settings-hub')" class="text-gray-400 hover:text-gray-600 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -283,7 +283,7 @@
                 <div id="search-status-message" class="text-xs text-gray-400 italic pt-1">Loading your library database...</div>
             </div>
 
-            <div id="search-results-list" class="space-y-3"></div>
+            <div id="search-results-list" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3"></div>
         </div>
 
         <!-- ================= CHECKOUT MODE VIEW ================= -->
@@ -317,7 +317,7 @@
                 <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="package" class="w-4 h-4 shrink-0"></i><span class="leading-none">Checked Out</span>
                 </h3>
-                <div id="checkedout-list-container" class="space-y-3"></div>
+                <div id="checkedout-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
             </div>
         </div>
 
@@ -334,14 +334,14 @@
                     <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wider flex items-center gap-2">
                         <i data-lucide="book-open" class="w-4 h-4 shrink-0"></i><span class="leading-none">Currently Reading</span>
                     </h3>
-                    <div id="home-reading-list-container" class="space-y-3"></div>
+                    <div id="home-reading-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
                 </div>
 
                 <div class="space-y-3">
                     <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-2">
                         <i data-lucide="bookmark" class="w-4 h-4 shrink-0"></i><span class="leading-none">Want to Read</span>
                     </h3>
-                    <div id="home-wanttoread-list-container" class="space-y-3"></div>
+                    <div id="home-wanttoread-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
                 </div>
             </div>
         </div>
@@ -375,7 +375,7 @@
 
     <!-- Add Book Modal (Scan / Manual ISBN Entry) -->
     <div id="add-book-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 z-40 overflow-y-auto">
-        <div class="max-w-xl w-full my-8 relative space-y-4">
+        <div class="max-w-xl lg:max-w-2xl w-full my-8 relative space-y-4">
             <button onclick="closeAddBookModal()" class="absolute -top-3 -right-3 bg-white rounded-full w-9 h-9 shadow-lg border border-gray-200 text-gray-500 hover:text-gray-800 font-bold text-lg cursor-pointer z-10 flex items-center justify-center" title="Close">&times;</button>
 
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 space-y-4">
@@ -436,7 +436,7 @@
 
     <!-- Manual Entry Modal -->
     <div id="manual-entry-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+        <div class="bg-white rounded-2xl max-w-md lg:max-w-lg w-full p-6 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b border-gray-100 pb-2">
                 <h3 class="text-sm font-bold text-gray-800 uppercase flex items-center gap-1.5"><i data-lucide="edit-3" class="w-4 h-4 shrink-0"></i><span class="leading-none">Add Book Manually</span></h3>
                 <button onclick="closeManualBookModal()" class="text-gray-400 hover:text-gray-600 font-bold text-lg cursor-pointer">&times;</button>
@@ -518,7 +518,7 @@
 
     <!-- Book Detail Modal -->
     <div id="book-detail-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="max-w-xl w-full my-8 relative space-y-4">
+        <div class="max-w-xl lg:max-w-2xl w-full my-8 relative space-y-4">
             <button onclick="closeBookDetailModal()" class="absolute -top-3 -right-3 bg-white rounded-full w-9 h-9 shadow-lg border border-gray-200 text-gray-500 hover:text-gray-800 font-bold text-lg cursor-pointer z-10 flex items-center justify-center" title="Close">&times;</button>
             <div id="status-log" class="hidden text-sm p-3 rounded-xl border font-medium text-center"></div>
             <main id="book-result" class="space-y-6"></main>
@@ -2942,7 +2942,7 @@
 
                 <div class="bg-white rounded-2xl shadow-sm p-5 space-y-3">
                     <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="book-marked" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Book Details</span></h3>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase">Publisher${missingBadge(currentScannedBook.publisher)}</label>
                             <input type="text" id="input-publisher" class="w-full border-0 rounded-lg p-2 text-xs ${missingFieldClass(currentScannedBook.publisher)}">
