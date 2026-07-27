@@ -225,6 +225,25 @@
                     <button onclick="fetchAllBooksFromGoogleSheet()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
                     </button>
+                    <button id="bulk-mode-toggle-btn" onclick="toggleBulkEditMode()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+                        <i data-lucide="list-checks" class="w-3.5 h-3.5"></i> Select
+                    </button>
+                </div>
+
+                <!-- Bulk Edit Action Bar -->
+                <div id="bulk-edit-bar" class="hidden bg-indigo-50 rounded-xl p-3 flex items-center justify-between gap-2 flex-wrap">
+                    <span id="bulk-edit-count" class="text-xs font-bold text-indigo-700">0 selected</span>
+                    <div class="flex gap-2">
+                        <button onclick="openBulkLocationModal()" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
+                            <i data-lucide="map-pin" class="w-3 h-3"></i> Set Location
+                        </button>
+                        <button onclick="openBulkTagsModal()" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
+                            <i data-lucide="tag" class="w-3 h-3"></i> Add Tags
+                        </button>
+                        <button onclick="toggleBulkEditMode()" class="text-gray-500 hover:text-gray-700 font-semibold px-2 py-1.5 rounded-lg text-[11px] transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Sorting & Availability Filters -->
@@ -421,6 +440,42 @@
         </div>
     </div>
 
+    <!-- Bulk Set Location Modal -->
+    <div id="bulk-location-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h3 class="text-sm font-bold text-gray-800 uppercase">Set Location</h3>
+            </div>
+            <p id="bulk-location-message" class="text-xs text-gray-600"></p>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">New location for selected books</label>
+                <select id="bulk-location-select" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"></select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeBulkLocationModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold cursor-pointer transition-colors">Cancel</button>
+                <button onclick="applyBulkLocation()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Add Tags Modal -->
+    <div id="bulk-tags-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                <h3 class="text-sm font-bold text-gray-800 uppercase">Add Tags</h3>
+            </div>
+            <p id="bulk-tags-message" class="text-xs text-gray-600"></p>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">Tags to add to selected books</label>
+                <div id="bulk-tags-chips" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeBulkTagsModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold cursor-pointer transition-colors">Cancel</button>
+                <button onclick="applyBulkTags()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors">Apply</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Book Detail Modal -->
     <div id="book-detail-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 z-50 overflow-y-auto">
         <div class="max-w-xl w-full my-8 relative space-y-4">
@@ -487,6 +542,8 @@
         // manually resolves it (via title search or linking to an existing library book),
         // we can remember "this barcode = this book" for future scans.
         let pendingAliasSourceIsbn = null;
+        let bulkEditMode = false;
+        let bulkSelectedUniqueIds = new Set();
         let globalCatalogCache = []; 
         let activeSelectedCategoryFilter = ""; 
         
@@ -930,12 +987,18 @@
                 if (isCheckedOut) cardBgClass = "bg-red-50/40 hover:bg-red-50/70";
                 else if (isCurrentlyReading) cardBgClass = "bg-amber-50/40 hover:bg-amber-50/70";
 
+                const isSelected = bulkSelectedUniqueIds.has(book.uniqueId);
+
                 const card = document.createElement("div");
-                card.className = `${cardBgClass} p-3 rounded-xl flex gap-3 text-left cursor-pointer transition-all relative overflow-hidden`;
+                card.className = `${cardBgClass} p-3 rounded-xl flex gap-3 text-left cursor-pointer transition-all relative overflow-hidden${isSelected ? ' ring-2 ring-indigo-500' : ''}`;
                 if (isOverdue) card.classList.add("border-l-4", "border-l-red-500");
                 else if (isDueSoon) card.classList.add("border-l-4", "border-l-amber-500");
 
                 card.onclick = () => {
+                    if (bulkEditMode) {
+                        toggleBulkSelection(book.uniqueId);
+                        return;
+                    }
                     isbnInput.value = book.isbn;
                     pendingSelectUniqueId = book.uniqueId;
                     checkExistingAndFetchMetadata(book.isbn, book);
@@ -959,6 +1022,7 @@
                 }
         
                 card.innerHTML = `
+                    ${bulkEditMode ? `<div class="absolute top-2 right-2 w-6 h-6 rounded-full ${isSelected ? 'bg-indigo-600' : 'bg-white/90 border-2 border-gray-300'} flex items-center justify-center z-10">${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>' : ''}</div>` : ''}
                     <div class="w-24 h-32 bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg overflow-hidden shrink-0 shadow-sm ring-1 ring-black/5">
                         <img src="${displayCover}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
                     </div>
@@ -985,6 +1049,134 @@
                 `;
                 searchResultsList.appendChild(card);
             });
+        }
+
+        // ===================== BULK EDIT =====================
+        function toggleBulkEditMode() {
+            bulkEditMode = !bulkEditMode;
+            bulkSelectedUniqueIds.clear();
+
+            const bar = document.getElementById("bulk-edit-bar");
+            const toggleBtn = document.getElementById("bulk-mode-toggle-btn");
+            if (bulkEditMode) {
+                bar.classList.remove("hidden");
+                toggleBtn.className = "bg-indigo-600 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer";
+            } else {
+                bar.classList.add("hidden");
+                toggleBtn.className = "bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer";
+            }
+            updateBulkEditBar();
+            filterLocalCatalogCache();
+        }
+
+        function toggleBulkSelection(uniqueId) {
+            if (bulkSelectedUniqueIds.has(uniqueId)) bulkSelectedUniqueIds.delete(uniqueId);
+            else bulkSelectedUniqueIds.add(uniqueId);
+            updateBulkEditBar();
+            filterLocalCatalogCache();
+        }
+
+        function updateBulkEditBar() {
+            const countEl = document.getElementById("bulk-edit-count");
+            if (countEl) countEl.innerText = `${bulkSelectedUniqueIds.size} selected`;
+        }
+
+        function openBulkLocationModal() {
+            if (bulkSelectedUniqueIds.size === 0) { alert("Select at least one book first."); return; }
+            document.getElementById("bulk-location-message").innerText = `Set the location for ${bulkSelectedUniqueIds.size} selected book(s):`;
+            const select = document.getElementById("bulk-location-select");
+            select.innerHTML = "";
+            userLocations.forEach(loc => {
+                const opt = document.createElement("option");
+                opt.value = loc;
+                opt.innerText = loc;
+                select.appendChild(opt);
+            });
+            document.getElementById("bulk-location-modal").classList.remove("hidden");
+        }
+
+        function closeBulkLocationModal() {
+            document.getElementById("bulk-location-modal").classList.add("hidden");
+        }
+
+        async function applyBulkLocation() {
+            const location = document.getElementById("bulk-location-select").value;
+            const count = bulkSelectedUniqueIds.size;
+            const success = await bulkUpdateOnServer({ location });
+            closeBulkLocationModal();
+            if (success) {
+                toggleBulkEditMode();
+                await fetchAllBooksFromGoogleSheet();
+                searchStatusMessage.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Location updated for ${count} book(s).`;
+            } else {
+                alert("Bulk update failed. Please try again.");
+            }
+        }
+
+        function openBulkTagsModal() {
+            if (bulkSelectedUniqueIds.size === 0) { alert("Select at least one book first."); return; }
+            document.getElementById("bulk-tags-message").innerText = `Choose tags to add to ${bulkSelectedUniqueIds.size} selected book(s) (existing tags on each book are kept):`;
+            const container = document.getElementById("bulk-tags-chips");
+            container.innerHTML = "";
+            userTags.filter(t => isTagManageable(t)).forEach(t => {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.setAttribute("data-val", t);
+                b.className = "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer";
+                b.innerHTML = `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${t}`;
+                b.onclick = () => {
+                    const isSel = b.classList.toggle("bg-indigo-600");
+                    b.classList.toggle("text-white");
+                    b.classList.toggle("border-indigo-600");
+                    b.classList.toggle("bg-gray-50");
+                    b.classList.toggle("text-gray-600");
+                    b.classList.toggle("border-gray-200/80");
+                    b.innerHTML = isSel ? `<i data-lucide="tag" class="w-3 h-3 inline shrink-0"></i> ${t}` : `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${t}`;
+                };
+                container.appendChild(b);
+            });
+            document.getElementById("bulk-tags-modal").classList.remove("hidden");
+        }
+
+        function closeBulkTagsModal() {
+            document.getElementById("bulk-tags-modal").classList.add("hidden");
+        }
+
+        async function applyBulkTags() {
+            const selectedTags = Array.from(document.querySelectorAll("#bulk-tags-chips button.bg-indigo-600")).map(b => b.getAttribute("data-val"));
+            if (selectedTags.length === 0) { alert("Pick at least one tag."); return; }
+
+            const count = bulkSelectedUniqueIds.size;
+            const success = await bulkUpdateOnServer({ addTags: selectedTags });
+            closeBulkTagsModal();
+            if (success) {
+                toggleBulkEditMode();
+                await fetchAllBooksFromGoogleSheet();
+                searchStatusMessage.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Tags added to ${count} book(s).`;
+            } else {
+                alert("Bulk update failed. Please try again.");
+            }
+        }
+
+        async function bulkUpdateOnServer({ location = "", addTags = [] }) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "bulkUpdateBooks",
+                        token: SHARED_SECRET,
+                        uniqueIds: Array.from(bulkSelectedUniqueIds),
+                        location: location,
+                        addTags: addTags
+                    })
+                });
+                const resData = await response.json();
+                return resData.status === "success";
+            } catch (e) {
+                console.error("Error applying bulk update:", e);
+                return false;
+            }
         }
 
         function renderCheckoutTab() {
