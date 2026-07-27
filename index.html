@@ -2499,7 +2499,10 @@
                 scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
                 toggleScanBtn.innerText = "Close Scanner"; 
                 toggleScanBtn.classList.replace("bg-indigo-600", "bg-gray-600"); 
-                startScanning(); 
+                // Wait for the section's expand transition (300ms) to finish before starting
+                // the camera — starting immediately measures the container mid-animation,
+                // which is what was causing the scan box to render misaligned.
+                setTimeout(startScanning, 320); 
             } else { 
                 stopScanning(); 
             } 
@@ -2554,8 +2557,34 @@
             actionBtnContainer.innerHTML = `<button id="toggle-scan-btn" onclick="toggleScanner()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><span>Open Scanner</span></button>`; 
         }
 
+        // EAN-13/EAN-8 barcodes (which is what ISBNs physically are) encode a checksum
+        // digit specifically for catching misreads — a bit of glare, motion, or grabbing
+        // a neighboring price-addon barcode can make the camera report a value that looks
+        // like a real code but fails this check. Filtering those out here, before they
+        // ever reach the lookup, is what actually fixes "scans a random wrong ISBN".
+        function isValidBarcodeChecksum(code) {
+            if (/^\d{13}$/.test(code)) {
+                let sum = 0;
+                for (let i = 0; i < 12; i++) {
+                    sum += parseInt(code[i], 10) * (i % 2 === 0 ? 1 : 3);
+                }
+                const checkDigit = (10 - (sum % 10)) % 10;
+                return checkDigit === parseInt(code[12], 10);
+            }
+            if (/^\d{8}$/.test(code)) {
+                let sum = 0;
+                for (let i = 0; i < 7; i++) {
+                    sum += parseInt(code[i], 10) * (i % 2 === 0 ? 3 : 1);
+                }
+                const checkDigit = (10 - (sum % 10)) % 10;
+                return checkDigit === parseInt(code[7], 10);
+            }
+            return true; // not a recognized length — don't block it, just pass it through
+        }
+
         function onScanSuccess(dt) { 
             if (scannerSection.classList.contains("max-h-0")) return; 
+            if (!isValidBarcodeChecksum(dt)) return; // likely misread — ignore and keep scanning
             isbnInput.value = dt; 
             scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
             scannerSection.classList.add("max-h-0", "opacity-0", "border-none"); 
@@ -2578,7 +2607,7 @@
             scannerSection.classList.remove("max-h-0", "opacity-0", "border-none"); 
             scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
             actionBtnContainer.innerHTML = `<button id="toggle-scan-btn" onclick="toggleScanner()" class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><span>Close Scanner</span></button>`; 
-            startScanning(); 
+            setTimeout(startScanning, 320); 
         }
 
         function toggleChipState(c) { 
