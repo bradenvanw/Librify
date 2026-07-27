@@ -2499,10 +2499,7 @@
                 scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
                 toggleScanBtn.innerText = "Close Scanner"; 
                 toggleScanBtn.classList.replace("bg-indigo-600", "bg-gray-600"); 
-                // Wait for the section's expand transition (300ms) to finish before starting
-                // the camera — starting immediately measures the container mid-animation,
-                // which is what was causing the scan box to render misaligned.
-                setTimeout(startScanning, 320); 
+                startScanning(); 
             } else { 
                 stopScanning(); 
             } 
@@ -2607,7 +2604,7 @@
             scannerSection.classList.remove("max-h-0", "opacity-0", "border-none"); 
             scannerSection.classList.add("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
             actionBtnContainer.innerHTML = `<button id="toggle-scan-btn" onclick="toggleScanner()" class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-5 py-3 rounded-xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"><span>Close Scanner</span></button>`; 
-            setTimeout(startScanning, 320); 
+            startScanning(); 
         }
 
         function toggleChipState(c) { 
