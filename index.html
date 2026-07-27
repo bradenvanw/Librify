@@ -189,7 +189,7 @@
                 <i data-lucide="home" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Home</span>
             </button>
             <button id="tab-search-mode" onclick="switchAppMode('search')" class="flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="search" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Search</span>
+                <i data-lucide="library" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Library</span>
             </button>
             <button id="tab-checkout-mode" onclick="switchAppMode('checkout')" class="flex-1 text-center py-2 text-xs font-bold rounded-full text-gray-600 hover:text-gray-900 cursor-pointer transition-all flex items-center justify-center gap-1.5">
                 <i data-lucide="package" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Checkout</span>
@@ -237,8 +237,11 @@
                         <button onclick="openBulkLocationModal()" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
                             <i data-lucide="map-pin" class="w-3 h-3"></i> Set Location
                         </button>
-                        <button onclick="openBulkTagsModal()" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
+                        <button onclick="openBulkTagsModal('add')" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
                             <i data-lucide="tag" class="w-3 h-3"></i> Add Tags
+                        </button>
+                        <button onclick="openBulkTagsModal('remove')" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
+                            <i data-lucide="tag" class="w-3 h-3"></i> Remove Tags
                         </button>
                         <button onclick="toggleBulkEditMode()" class="text-gray-500 hover:text-gray-700 font-semibold px-2 py-1.5 rounded-lg text-[11px] transition-colors cursor-pointer">
                             Cancel
@@ -377,35 +380,32 @@
             <button onclick="closeAddBookModal()" class="absolute -top-3 -right-3 bg-white rounded-full w-9 h-9 shadow-lg border border-gray-200 text-gray-500 hover:text-gray-800 font-bold text-lg cursor-pointer z-10 flex items-center justify-center" title="Close">&times;</button>
 
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 space-y-4">
-                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="camera" class="w-4 h-4 shrink-0"></i><span class="leading-none">Add a Book</span></h2>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative flex-grow">
-                        <input type="text" id="isbn-input" placeholder="Enter 10 or 13-digit ISBN..." 
-                            class="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all">
-                    </div>
+                <h2 id="add-book-modal-title" class="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="camera" class="w-4 h-4 shrink-0"></i><span class="leading-none">Add a Book</span></h2>
+
+                <!-- Lookup by title/author: only this input+button shows -->
+                <div id="addbook-lookup-row" class="hidden flex gap-2">
+                    <input type="text" id="isbn-input" placeholder="Enter 10 or 13-digit ISBN..." 
+                        class="w-full pl-4 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all">
+                    <button onclick="submitDirectLookup()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer whitespace-nowrap">
+                        Search
+                    </button>
+                </div>
+
+                <!-- Scan / Rapid Scan: camera controls + viewfinder -->
+                <div id="addbook-scan-cluster" class="hidden space-y-4">
                     <div id="action-btn-container" class="flex gap-2">
                         <button id="toggle-scan-btn" onclick="toggleScanner()" 
                             class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
                             <span>Open Scanner</span>
                         </button>
                     </div>
-                </div>
 
-                <div class="text-right">
-                    <button onclick="openManualBookModal()" class="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer">
-                        + Add Book Manually (Without Barcode)
-                    </button>
-                </div>
-
-                <div class="bg-gray-50 rounded-xl p-3 space-y-2">
-                    <label class="flex items-center justify-between cursor-pointer">
+                    <!-- Rapid Scan only: defaults panel -->
+                    <div id="quick-add-panel" class="hidden bg-gray-50 rounded-xl p-3 space-y-2">
                         <span class="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                             <i data-lucide="zap" class="w-3.5 h-3.5 shrink-0"></i>
-                            <span class="leading-none">Quick Add — auto-save clean matches, skip review</span>
+                            <span class="leading-none">Rapid Scan defaults</span>
                         </span>
-                        <input type="checkbox" id="quick-add-checkbox" onchange="toggleQuickAddMode(this.checked)" class="accent-indigo-600 rounded w-4 h-4 shrink-0">
-                    </label>
-                    <div id="quick-add-defaults" class="hidden space-y-2 pt-1">
                         <div class="space-y-1">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase">Default location for scanned books</label>
                             <select id="quick-add-location-select" onchange="quickAddDefaultLocation = this.value" class="w-full bg-white border border-gray-200 rounded-lg p-2 text-xs font-medium"></select>
@@ -414,14 +414,14 @@
                             <label class="block text-[10px] font-bold text-gray-500 uppercase">Default tags (optional)</label>
                             <div id="quick-add-tags-chips" class="flex flex-wrap gap-2"></div>
                         </div>
-                        <p class="text-[10px] text-gray-400 italic">Anything ambiguous (multiple possible matches, or an unrecognized barcode) still opens for review — Quick Add only skips it for clean, confident matches.</p>
+                        <p class="text-[10px] text-gray-400 italic">Anything ambiguous (multiple possible matches, or an unrecognized barcode) still opens for review — Rapid Scan only skips it for clean, confident matches.</p>
                     </div>
-                </div>
 
-                <div id="scanner-section" class="max-h-0 opacity-0 overflow-hidden border-gray-200 rounded-2xl bg-gray-50 transition-all duration-300 ease-in-out">
-                    <div class="p-3">
-                        <div id="interactive-reader" class="w-full mx-auto"></div>
-                        <p class="text-center text-xs text-gray-400 mt-2">Center the book's linear barcode inside the box.</p>
+                    <div id="scanner-section" class="max-h-0 opacity-0 overflow-hidden border-gray-200 rounded-2xl bg-gray-50 transition-all duration-300 ease-in-out">
+                        <div class="p-3">
+                            <div id="interactive-reader" class="w-full mx-auto"></div>
+                            <p class="text-center text-xs text-gray-400 mt-2">Center the book's linear barcode inside the box.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -503,16 +503,16 @@
     <div id="bulk-tags-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b border-gray-100 pb-2">
-                <h3 class="text-sm font-bold text-gray-800 uppercase">Add Tags</h3>
+                <h3 id="bulk-tags-title" class="text-sm font-bold text-gray-800 uppercase">Add Tags</h3>
             </div>
             <p id="bulk-tags-message" class="text-xs text-gray-600"></p>
             <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-gray-500 uppercase">Tags to add to selected books</label>
+                <label id="bulk-tags-label" class="block text-[10px] font-bold text-gray-500 uppercase">Tags to add to selected books</label>
                 <div id="bulk-tags-chips" class="flex flex-wrap gap-2"></div>
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="closeBulkTagsModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold cursor-pointer transition-colors">Cancel</button>
-                <button onclick="applyBulkTags()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors">Apply</button>
+                <button id="bulk-tags-apply-btn" onclick="applyBulkTags()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors">Apply</button>
             </div>
         </div>
     </div>
@@ -1157,25 +1157,57 @@
             }
         }
 
-        function openBulkTagsModal() {
+        let bulkTagsMode = "add";
+
+        function openBulkTagsModal(mode) {
             if (bulkSelectedUniqueIds.size === 0) { alert("Select at least one book first."); return; }
-            document.getElementById("bulk-tags-message").innerText = `Choose tags to add to ${bulkSelectedUniqueIds.size} selected book(s) (existing tags on each book are kept):`;
+            bulkTagsMode = mode;
+
+            const isRemove = mode === "remove";
+            document.getElementById("bulk-tags-title").innerText = isRemove ? "Remove Tags" : "Add Tags";
+            document.getElementById("bulk-tags-label").innerText = isRemove ? "Tags to remove from selected books" : "Tags to add to selected books";
+            document.getElementById("bulk-tags-apply-btn").className = isRemove
+                ? "px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                : "px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors";
+            document.getElementById("bulk-tags-message").innerText = isRemove
+                ? `Choose tags to remove from ${bulkSelectedUniqueIds.size} selected book(s) (any other tags they have are kept):`
+                : `Choose tags to add to ${bulkSelectedUniqueIds.size} selected book(s) (existing tags on each book are kept):`;
+
             const container = document.getElementById("bulk-tags-chips");
             container.innerHTML = "";
-            userTags.filter(t => isTagManageable(t)).forEach(t => {
+
+            // For "remove", only offer tags actually present on at least one selected
+            // book — no point offering to remove a tag that isn't there.
+            let tagPool;
+            if (isRemove) {
+                const tagsPresent = new Set();
+                globalCatalogCache.filter(b => bulkSelectedUniqueIds.has(b.uniqueId)).forEach(b => {
+                    (b.tags || "").toString().split(",").map(t => t.trim()).filter(Boolean).forEach(t => tagsPresent.add(t));
+                });
+                tagPool = [...tagsPresent].filter(t => isTagManageable(t));
+            } else {
+                tagPool = userTags.filter(t => isTagManageable(t));
+            }
+
+            if (tagPool.length === 0) {
+                container.innerHTML = `<p class="text-[11px] text-gray-400 italic">${isRemove ? "None of the selected books have any tags to remove." : "No tags available — add some in Settings first."}</p>`;
+            }
+
+            const unselectedIcon = isRemove ? "minus" : "plus";
+            tagPool.forEach(t => {
                 const b = document.createElement("button");
                 b.type = "button";
                 b.setAttribute("data-val", t);
                 b.className = "tag-chip bg-gray-50 text-gray-600 border border-gray-200/80 px-3 py-1.5 text-xs font-medium rounded-xl cursor-pointer";
-                b.innerHTML = `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${t}`;
+                b.innerHTML = `<i data-lucide="${unselectedIcon}" class="w-3 h-3 inline shrink-0"></i> ${t}`;
                 b.onclick = () => {
-                    const isSel = b.classList.toggle("bg-indigo-600");
+                    const isSel = b.classList.toggle(isRemove ? "bg-red-600" : "bg-indigo-600");
                     b.classList.toggle("text-white");
-                    b.classList.toggle("border-indigo-600");
+                    b.classList.toggle(isRemove ? "border-red-600" : "border-indigo-600");
                     b.classList.toggle("bg-gray-50");
                     b.classList.toggle("text-gray-600");
                     b.classList.toggle("border-gray-200/80");
-                    b.innerHTML = isSel ? `<i data-lucide="tag" class="w-3 h-3 inline shrink-0"></i> ${t}` : `<i data-lucide="plus" class="w-3 h-3 inline shrink-0"></i> ${t}`;
+                    b.innerHTML = isSel ? `<i data-lucide="tag" class="w-3 h-3 inline shrink-0"></i> ${t}` : `<i data-lucide="${unselectedIcon}" class="w-3 h-3 inline shrink-0"></i> ${t}`;
                 };
                 container.appendChild(b);
             });
@@ -1187,22 +1219,25 @@
         }
 
         async function applyBulkTags() {
-            const selectedTags = Array.from(document.querySelectorAll("#bulk-tags-chips button.bg-indigo-600")).map(b => b.getAttribute("data-val"));
+            const isRemove = bulkTagsMode === "remove";
+            const selectedTags = Array.from(document.querySelectorAll(`#bulk-tags-chips button.${isRemove ? 'bg-red-600' : 'bg-indigo-600'}`)).map(b => b.getAttribute("data-val"));
             if (selectedTags.length === 0) { alert("Pick at least one tag."); return; }
 
             const count = bulkSelectedUniqueIds.size;
-            const success = await bulkUpdateOnServer({ addTags: selectedTags });
+            const success = isRemove
+                ? await bulkUpdateOnServer({ removeTags: selectedTags })
+                : await bulkUpdateOnServer({ addTags: selectedTags });
             closeBulkTagsModal();
             if (success) {
                 toggleBulkEditMode();
                 await fetchAllBooksFromGoogleSheet();
-                searchStatusMessage.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Tags added to ${count} book(s).`;
+                searchStatusMessage.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Tags ${isRemove ? 'removed from' : 'added to'} ${count} book(s).`;
             } else {
                 alert("Bulk update failed. Please try again.");
             }
         }
 
-        async function bulkUpdateOnServer({ location = "", addTags = [] }) {
+        async function bulkUpdateOnServer({ location = "", addTags = [], removeTags = [] }) {
             try {
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
@@ -1212,7 +1247,8 @@
                         token: SHARED_SECRET,
                         uniqueIds: Array.from(bulkSelectedUniqueIds),
                         location: location,
-                        addTags: addTags
+                        addTags: addTags,
+                        removeTags: removeTags
                     })
                 });
                 const resData = await response.json();
@@ -2565,6 +2601,26 @@
         // Handles the four speed-dial entry points. "Scan" and "Rapid Scan" share the
         // same Add Book modal and just differ in whether Quick Add is pre-enabled —
         // Rapid Scan is really just "Quick Add, opened straight into the camera."
+        // Shows only the section of the Add Book modal relevant to how it was opened,
+        // instead of always showing every entry method at once.
+        function setAddBookModalMode(mode) {
+            document.getElementById("addbook-lookup-row").classList.toggle("hidden", mode !== "lookup");
+            document.getElementById("addbook-scan-cluster").classList.toggle("hidden", mode === "lookup");
+            document.getElementById("quick-add-panel").classList.toggle("hidden", mode !== "rapid");
+
+            const titleText = mode === "lookup" ? "Search by Title or Author"
+                : mode === "rapid" ? "Rapid Scan"
+                : "Scan a Barcode";
+            const titleEl = document.getElementById("add-book-modal-title");
+            const titleSpan = titleEl.querySelector("span");
+            if (titleSpan) titleSpan.innerText = titleText;
+        }
+
+        function submitDirectLookup() {
+            const q = isbnInput.value.trim();
+            if (q) checkExistingAndFetchMetadata(q);
+        }
+
         function startFabAction(action) {
             closeFabMenu();
 
@@ -2574,28 +2630,17 @@
             }
 
             openAddBookModal();
+            setAddBookModalMode(action);
 
             if (action === "lookup") {
-                document.getElementById("quick-add-checkbox").checked = false;
-                toggleQuickAddMode(false);
+                quickAddMode = false;
                 isbnInput.placeholder = "Search by title or author...";
                 isbnInput.focus();
                 return;
             }
 
-            if (action === "rapid") {
-                document.getElementById("quick-add-checkbox").checked = true;
-                toggleQuickAddMode(true);
-            } else {
-                document.getElementById("quick-add-checkbox").checked = false;
-                toggleQuickAddMode(false);
-            }
+            quickAddMode = (action === "rapid");
             toggleScanner();
-        }
-
-        function toggleQuickAddMode(checked) {
-            quickAddMode = checked;
-            document.getElementById("quick-add-defaults").classList.toggle("hidden", !quickAddMode);
         }
 
         function populateQuickAddDefaultsUI() {
@@ -2722,9 +2767,19 @@
                 formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ] 
             }; 
             try {
-                await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                // Requesting continuous autofocus helps a lot with how quickly the camera
+                // re-settles on a close-up barcode after a fresh stream starts, which is
+                // exactly the moment (right after Rapid Scan reopens the camera) where
+                // blur is most noticeable. Support for this varies by device/browser —
+                // some reject the constraint outright, so we fall back to the plain
+                // constraint if that happens rather than risk a hard camera failure.
+                await html5QrcodeScanner.start({ facingMode: "environment", advanced: [{ focusMode: "continuous" }] }, config, onScanSuccess, onScanFailure);
             } catch (err) {
-                showScanStatus("Camera failure.", "error");
+                try {
+                    await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                } catch (err2) {
+                    showScanStatus("Camera failure.", "error");
+                }
             }
         }
 
