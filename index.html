@@ -2621,6 +2621,9 @@
         }
 
         async function startScanning() { 
+            lastScannedCode = null;
+            scanConfirmCount = 0;
+
             // If a previous scanning session is still active or wasn't fully cleaned up,
             // stop and clear it and wait for that to finish before starting a new one.
             // Starting a fresh session before the camera is actually released is a common
@@ -2694,9 +2697,27 @@
             return true; // not a recognized length — don't block it, just pass it through
         }
 
+        let lastScannedCode = null;
+        let scanConfirmCount = 0;
+
         function onScanSuccess(dt) { 
             if (scannerSection.classList.contains("max-h-0")) return; 
-            if (!isValidBarcodeChecksum(dt)) return; // likely misread — ignore and keep scanning
+            if (!isValidBarcodeChecksum(dt)) { lastScannedCode = null; scanConfirmCount = 0; return; } // likely misread — ignore and keep scanning
+
+            // Require the same value on two consecutive frames before trusting it. A
+            // one-off misread essentially never reproduces itself identically twice in a
+            // row, even when it happens to still pass the checksum — this is what actually
+            // catches that case.
+            if (dt === lastScannedCode) {
+                scanConfirmCount++;
+            } else {
+                lastScannedCode = dt;
+                scanConfirmCount = 1;
+            }
+            if (scanConfirmCount < 2) return;
+            lastScannedCode = null;
+            scanConfirmCount = 0;
+
             isbnInput.value = dt; 
             scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
             scannerSection.classList.add("max-h-0", "opacity-0", "border-none"); 
