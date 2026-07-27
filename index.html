@@ -94,7 +94,6 @@
         <!-- Header -->
         <header class="text-center my-6 relative">
             <h1 class="text-3xl font-serif font-semibold text-indigo-600 tracking-tight">Librify</h1>
-            <p class="text-sm text-gray-500 mt-1">Search your collection, scan a barcode, or manage parameters</p>
             
             <!-- Active User Selector -->
             <button id="active-user-button" onclick="toggleUserSwitcherModal()" title="Current user: Everyone" class="absolute top-0 left-0 bg-white hover:bg-gray-100 rounded-full shadow-2xs transition-colors cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-1.5 pr-0 sm:pr-3">
@@ -209,12 +208,12 @@
                     <span id="stat-total-copies" class="text-lg font-black text-gray-700">0</span>
                 </div>
                 <div class="p-1">
-                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Available</span>
-                    <span id="stat-avail-rate" class="text-lg font-black text-indigo-600">0%</span>
+                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Series</span>
+                    <span id="stat-series-count" class="text-lg font-black text-indigo-600">0</span>
                 </div>
                 <div class="p-1">
-                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Overdue</span>
-                    <span id="stat-overdue-count" class="text-lg font-black text-red-600">0</span>
+                    <span class="block text-xs text-gray-400 font-bold uppercase tracking-wider">Reading</span>
+                    <span id="stat-reading-count" class="text-lg font-black text-amber-600">0</span>
                 </div>
             </div>
 
@@ -875,29 +874,26 @@
             
             const totalCopies = globalCatalogCache.length;
             const uniqueTitlesMap = new Set();
-            let availableCount = 0;
-            let overdueCount = 0;
+            const uniqueSeriesMap = new Set();
+            let readingCount = 0;
             
             globalCatalogCache.forEach(b => {
                 if (b.title) uniqueTitlesMap.add(b.title.trim().toLowerCase());
-                if (b.status === "Available" || !b.status) {
-                    availableCount++;
-                } else if (b.status === "Checked Out" && b.dueDate && checkItemOverdueStatus(b.dueDate)) {
-                    overdueCount++;
-                }
+                if (b.seriesName && b.seriesName.trim() !== "") uniqueSeriesMap.add(b.seriesName.trim().toLowerCase());
+                if (b.status === "Currently Reading") readingCount++;
             });
             
             const totalTitles = uniqueTitlesMap.size;
-            const availRate = totalCopies > 0 ? Math.round((availableCount / totalCopies) * 100) : 0;
+            const totalSeries = uniqueSeriesMap.size;
             
-            updateAnalyticsDashboardUI(totalTitles, totalCopies, availRate, overdueCount);
+            updateAnalyticsDashboardUI(totalTitles, totalCopies, totalSeries, readingCount);
         }
 
-        function updateAnalyticsDashboardUI(titles, copies, rate, overdue) {
+        function updateAnalyticsDashboardUI(titles, copies, seriesCount, readingCount) {
             document.getElementById("stat-total-titles").innerText = titles;
             document.getElementById("stat-total-copies").innerText = copies;
-            document.getElementById("stat-avail-rate").innerText = `${rate}%`;
-            document.getElementById("stat-overdue-count").innerText = overdue;
+            document.getElementById("stat-series-count").innerText = seriesCount;
+            document.getElementById("stat-reading-count").innerText = readingCount;
         }
 
         async function fetchAllBooksFromGoogleSheet() {
