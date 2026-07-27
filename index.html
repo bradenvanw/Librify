@@ -2735,63 +2735,73 @@
             } 
         }
 
+        let scannerTransitioning = false;
+
         async function startScanning() { 
+            if (scannerTransitioning) return; // a start/stop is already in progress — don't overlap it
+            scannerTransitioning = true;
+
             lastScannedCode = null;
             scanConfirmCount = 0;
 
-            // If a previous scanning session is still active or wasn't fully cleaned up,
-            // stop and clear it and wait for that to finish before starting a new one.
-            // Starting a fresh session before the camera is actually released is a common
-            // cause of a scanner needing to be opened/closed a couple of times before it
-            // actually catches a barcode.
-            if (html5QrcodeScanner) {
-                try {
-                    if (html5QrcodeScanner.isScanning) {
-                        await html5QrcodeScanner.stop();
-                    }
-                    await html5QrcodeScanner.clear();
-                } catch (e) {}
-                html5QrcodeScanner = null;
-            }
-
-            const re = document.getElementById("interactive-reader"); 
-            if (re) re.innerHTML = ""; 
-            html5QrcodeScanner = new Html5Qrcode("interactive-reader"); 
-            const config = { 
-                fps: 10, 
-                qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; }, 
-                // ISBNs are physically printed as EAN-13 barcodes — there's no separate
-                // "ISBN_13" symbology in this library (that constant doesn't actually
-                // exist, so it was silently evaluating to undefined and corrupting this
-                // list, which is very likely why detection was unreliable before).
-                formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ] 
-            }; 
             try {
-                // Requesting continuous autofocus helps a lot with how quickly the camera
-                // re-settles on a close-up barcode after a fresh stream starts, which is
-                // exactly the moment (right after Rapid Scan reopens the camera) where
-                // blur is most noticeable. Support for this varies by device/browser —
-                // some reject the constraint outright, so we fall back to the plain
-                // constraint if that happens rather than risk a hard camera failure.
-                await html5QrcodeScanner.start({ facingMode: "environment", advanced: [{ focusMode: "continuous" }] }, config, onScanSuccess, onScanFailure);
-            } catch (err) {
-                try {
-                    await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
-                } catch (err2) {
-                    console.error("Camera start failed:", err2);
-                    const errName = err2 && err2.name ? err2.name : "";
-                    let hint = "Camera failure.";
-                    if (errName === "NotAllowedError") hint = "Camera permission denied — check your browser/site camera permissions.";
-                    else if (errName === "NotFoundError") hint = "No camera found on this device.";
-                    else if (errName === "NotReadableError") hint = "Camera is busy or already in use by another app/tab.";
-                    else if (errName === "OverconstrainedError") hint = "Camera doesn't support the requested settings.";
-                    else if (err2 && err2.message) hint = `Camera failure: ${err2.message}`;
-                    showScanStatus(hint, "error");
+                // If a previous scanning session is still active or wasn't fully cleaned up,
+                // stop and clear it and wait for that to finish before starting a new one.
+                // Starting a fresh session before the camera is actually released is a common
+                // cause of a scanner needing to be opened/closed a couple of times before it
+                // actually catches a barcode.
+                if (html5QrcodeScanner) {
+                    try {
+                        if (html5QrcodeScanner.isScanning) {
+                            await html5QrcodeScanner.stop();
+                        }
+                        await html5QrcodeScanner.clear();
+                    } catch (e) {}
+                    html5QrcodeScanner = null;
                 }
+
+                const re = document.getElementById("interactive-reader"); 
+                if (re) re.innerHTML = ""; 
+                html5QrcodeScanner = new Html5Qrcode("interactive-reader"); 
+                const config = { 
+                    fps: 10, 
+                    qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; }, 
+                    // ISBNs are physically printed as EAN-13 barcodes — there's no separate
+                    // "ISBN_13" symbology in this library (that constant doesn't actually
+                    // exist, so it was silently evaluating to undefined and corrupting this
+                    // list, which is very likely why detection was unreliable before).
+                    formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ] 
+                }; 
+                try {
+                    // Requesting continuous autofocus helps a lot with how quickly the camera
+                    // re-settles on a close-up barcode after a fresh stream starts, which is
+                    // exactly the moment (right after Rapid Scan reopens the camera) where
+                    // blur is most noticeable. Support for this varies by device/browser —
+                    // some reject the constraint outright, so we fall back to the plain
+                    // constraint if that happens rather than risk a hard camera failure.
+                    await html5QrcodeScanner.start({ facingMode: "environment", advanced: [{ focusMode: "continuous" }] }, config, onScanSuccess, onScanFailure);
+                } catch (err) {
+                    try {
+                        await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                    } catch (err2) {
+                        console.error("Camera start failed:", err2);
+                        const errName = err2 && err2.name ? err2.name : "";
+                        let hint = "Camera failure.";
+                        if (errName === "NotAllowedError") hint = "Camera permission denied — check your browser/site camera permissions.";
+                        else if (errName === "NotFoundError") hint = "No camera found on this device.";
+                        else if (errName === "NotReadableError") hint = "Camera is busy or already in use by another app/tab.";
+                        else if (errName === "OverconstrainedError") hint = "Camera doesn't support the requested settings.";
+                        else if (err2 && err2.message) hint = `Camera failure: ${err2.message}`;
+                        showScanStatus(hint, "error");
+                    }
+                }
+            } finally {
+                scannerTransitioning = false;
             }
         }
 
         function stopScanning() { 
+            if (scannerTransitioning) return; // let the in-progress start/stop finish on its own
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) { 
                 html5QrcodeScanner.stop().then(() => { resetScannerUIState(); }).catch(() => { resetScannerUIState(); }); 
             } else { 
