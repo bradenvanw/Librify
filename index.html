@@ -2505,16 +2505,39 @@
             } 
         }
 
-        function startScanning() { 
+        async function startScanning() { 
+            // If a previous scanning session is still active or wasn't fully cleaned up,
+            // stop and clear it and wait for that to finish before starting a new one.
+            // Starting a fresh session before the camera is actually released is a common
+            // cause of a scanner needing to be opened/closed a couple of times before it
+            // actually catches a barcode.
+            if (html5QrcodeScanner) {
+                try {
+                    if (html5QrcodeScanner.isScanning) {
+                        await html5QrcodeScanner.stop();
+                    }
+                    await html5QrcodeScanner.clear();
+                } catch (e) {}
+                html5QrcodeScanner = null;
+            }
+
             const re = document.getElementById("interactive-reader"); 
             if (re) re.innerHTML = ""; 
             html5QrcodeScanner = new Html5Qrcode("interactive-reader"); 
             const config = { 
                 fps: 10, 
                 qrbox: function(w, h) { return { width: Math.floor(w * 0.8), height: Math.floor(h * 0.4) }; }, 
-                formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.ISBN_13 ] 
+                // ISBNs are physically printed as EAN-13 barcodes — there's no separate
+                // "ISBN_13" symbology in this library (that constant doesn't actually
+                // exist, so it was silently evaluating to undefined and corrupting this
+                // list, which is very likely why detection was unreliable before).
+                formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ] 
             }; 
-            html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure).catch(err => { showScanStatus("Camera failure.", "error"); }); 
+            try {
+                await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+            } catch (err) {
+                showScanStatus("Camera failure.", "error");
+            }
         }
 
         function stopScanning() { 
