@@ -450,6 +450,7 @@
         // The "active user" applies across the whole app — Home tab and the tag chips
         // shown when editing a book both reflect whichever member is selected here.
         const EVERYONE_USER = "__EVERYONE__";
+        const AVATAR_COLORS = ["bg-indigo-600", "bg-amber-600", "bg-emerald-600", "bg-rose-500", "bg-violet-500", "bg-sky-500"];
         let currentActiveUser = localStorage.getItem("librify_active_user") || EVERYONE_USER;
 
         const addBookModal = document.getElementById("add-book-modal");
@@ -489,10 +490,24 @@
         let globalCatalogCache = []; 
         let activeSelectedCategoryFilter = ""; 
         
-        let userTags = JSON.parse(localStorage.getItem("librify_tags")) || ["To Read", "Favorite", "Hardcover", "Borrowed"];
-        let userLocations = JSON.parse(localStorage.getItem("librify_locations")) || ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"];
-        let householdMembers = JSON.parse(localStorage.getItem("librify_members")) || ["Self", "Partner", "Child"];
-        let visibleDashboardFilters = JSON.parse(localStorage.getItem("librify_visible_filters")) || [...userLocations, ...userTags];
+        // Loads a JSON array from localStorage, falling back to a default if the stored
+        // value is missing, invalid JSON, or (critically) not actually an array — bad data
+        // here previously crashed the whole startup sequence partway through, which broke
+        // several unrelated things downstream (Home tab, the user switcher, etc.) since
+        // JS aborts the rest of a top-level script after an uncaught synchronous error.
+        function loadArraySetting(key, fallback) {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(key));
+                return Array.isArray(parsed) ? parsed : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        let userTags = loadArraySetting("librify_tags", ["To Read", "Favorite", "Hardcover", "Borrowed"]);
+        let userLocations = loadArraySetting("librify_locations", ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"]);
+        let householdMembers = loadArraySetting("librify_members", ["Self", "Partner", "Child"]);
+        let visibleDashboardFilters = loadArraySetting("librify_visible_filters", [...userLocations, ...userTags]);
 
         async function syncSettingsToServer() {
             const settingsPayload = {
@@ -576,10 +591,10 @@
                 const settings = responseData.settings;
 
                 if (settings) {
-                    if (settings.userTags) userTags = settings.userTags;
-                    if (settings.userLocations) userLocations = settings.userLocations;
-                    if (settings.householdMembers) householdMembers = settings.householdMembers;
-                    if (settings.visibleDashboardFilters) visibleDashboardFilters = settings.visibleDashboardFilters;
+                    if (Array.isArray(settings.userTags)) userTags = settings.userTags;
+                    if (Array.isArray(settings.userLocations)) userLocations = settings.userLocations;
+                    if (Array.isArray(settings.householdMembers)) householdMembers = settings.householdMembers;
+                    if (Array.isArray(settings.visibleDashboardFilters)) visibleDashboardFilters = settings.visibleDashboardFilters;
 
                     localStorage.setItem("librify_tags", JSON.stringify(userTags));
                     localStorage.setItem("librify_locations", JSON.stringify(userLocations));
@@ -658,14 +673,14 @@
             if (activeSelectedCategoryFilter === "") allBtn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
             quickFilterPillsRow.appendChild(allBtn);
 
-            userLocations.forEach(loc => {
+            (Array.isArray(userLocations) ? userLocations : []).forEach(loc => {
                 if (!visibleDashboardFilters.includes(loc)) return;
                 const btn = createPillElement("map-pin", loc, loc);
                 if (activeSelectedCategoryFilter === loc) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
                 quickFilterPillsRow.appendChild(btn);
             });
 
-            userTags.forEach(tag => {
+            (Array.isArray(userTags) ? userTags : []).forEach(tag => {
                 if (!visibleDashboardFilters.includes(tag)) return;
                 const btn = createPillElement("tag", tag, tag);
                 if (activeSelectedCategoryFilter === tag) btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
@@ -1735,7 +1750,6 @@
 
         // Cycles a small set of palette colors across household members so each gets a
         // visually distinct avatar, without needing real profile photos.
-        const AVATAR_COLORS = ["bg-indigo-600", "bg-amber-600", "bg-emerald-600", "bg-rose-500", "bg-violet-500", "bg-sky-500"];
         function avatarColorForMember(name) {
             const idx = householdMembers.indexOf(name);
             return AVATAR_COLORS[idx >= 0 ? idx % AVATAR_COLORS.length : 0];
