@@ -2843,7 +2843,7 @@
         let lastScannedCode = null;
         let scanConfirmCount = 0;
 
-        function onScanSuccess(dt) { 
+        async function onScanSuccess(dt) { 
             if (scannerSection.classList.contains("max-h-0")) return; 
             if (!isValidBarcodeChecksum(dt)) { lastScannedCode = null; scanConfirmCount = 0; return; } // likely misread — ignore and keep scanning
 
@@ -2861,12 +2861,27 @@
             lastScannedCode = null;
             scanConfirmCount = 0;
 
+            // A start/stop transition is already in progress elsewhere (e.g. the camera is
+            // mid-restart from Rapid Scan) — this detection can't be safely acted on right
+            // now, so drop it rather than risk colliding with that transition. The camera
+            // keeps running either way, so a real barcode will just get picked up again a
+            // moment later.
+            if (scannerTransitioning) return;
+            scannerTransitioning = true;
+
             isbnInput.value = dt; 
             scannerSection.classList.remove("max-h-[500px]", "opacity-100", "border-2", "border-dashed"); 
             scannerSection.classList.add("max-h-0", "opacity-0", "border-none"); 
             if (html5QrcodeScanner) { 
-                html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; renderScanNextButtonState(); checkExistingAndFetchMetadata(dt); }).catch(() => { html5QrcodeScanner = null; renderScanNextButtonState(); checkExistingAndFetchMetadata(dt); }); 
+                try {
+                    await html5QrcodeScanner.stop();
+                } catch (e) {}
+                html5QrcodeScanner = null;
+                scannerTransitioning = false;
+                renderScanNextButtonState(); 
+                checkExistingAndFetchMetadata(dt); 
             } else { 
+                scannerTransitioning = false;
                 renderScanNextButtonState(); 
                 checkExistingAndFetchMetadata(dt); 
             } 
