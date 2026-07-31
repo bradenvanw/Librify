@@ -131,6 +131,7 @@
                     <button id="settings-subtab-members" onclick="switchSettingsSubTab('members')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Members</span></button>
                     <button id="settings-subtab-locations" onclick="switchSettingsSubTab('locations')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Locations</span></button>
                     <button id="settings-subtab-tags" onclick="switchSettingsSubTab('tags')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Tags</span></button>
+                    <button id="settings-subtab-borrowers" onclick="switchSettingsSubTab('borrowers')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="user-check" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Borrowers</span></button>
                     <button id="settings-subtab-data" onclick="switchSettingsSubTab('data')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Data</span></button>
                 </div>
 
@@ -177,6 +178,16 @@
                         <button onclick="exportCatalogToCSV()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">
                             <i data-lucide="download" class="w-4 h-4 shrink-0"></i><span class="leading-none">Export Catalog to CSV Backup</span>
                         </button>
+                    </div>
+
+                    <!-- Borrowers Panel -->
+                    <div id="settings-panel-borrowers" class="space-y-2 hidden">
+                        <p class="text-[11px] text-gray-400 italic">Saved borrowers show up as quick suggestions when checking out a book, so names stay consistent instead of getting retyped slightly differently each time.</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="new-borrower-input" placeholder="e.g., Sam..." class="flex-grow bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <button onclick="addNewBorrower()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer">Add</button>
+                        </div>
+                        <div id="borrower-library-list" class="flex flex-col gap-1.5 pt-1"></div>
                     </div>
                 </div>
             </div>
@@ -608,19 +619,22 @@
         let userLocations = loadArraySetting("librify_locations", ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"]);
         let householdMembers = loadArraySetting("librify_members", ["Self", "Partner", "Child"]);
         let visibleDashboardFilters = loadArraySetting("librify_visible_filters", [...userLocations, ...userTags]);
+        let userBorrowers = loadArraySetting("librify_borrowers", []);
 
         async function syncSettingsToServer() {
             const settingsPayload = {
                 userTags: userTags,
                 userLocations: userLocations,
                 householdMembers: householdMembers,
-                visibleDashboardFilters: visibleDashboardFilters
+                visibleDashboardFilters: visibleDashboardFilters,
+                userBorrowers: userBorrowers
             };
             
             localStorage.setItem("librify_tags", JSON.stringify(userTags));
             localStorage.setItem("librify_locations", JSON.stringify(userLocations));
             localStorage.setItem("librify_members", JSON.stringify(householdMembers));
             localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+            localStorage.setItem("librify_borrowers", JSON.stringify(userBorrowers));
         
             try {
                 await fetch(GOOGLE_SCRIPT_URL, {
@@ -695,15 +709,18 @@
                     if (Array.isArray(settings.userLocations)) userLocations = settings.userLocations;
                     if (Array.isArray(settings.householdMembers)) householdMembers = settings.householdMembers;
                     if (Array.isArray(settings.visibleDashboardFilters)) visibleDashboardFilters = settings.visibleDashboardFilters;
+                    if (Array.isArray(settings.userBorrowers)) userBorrowers = settings.userBorrowers;
 
                     localStorage.setItem("librify_tags", JSON.stringify(userTags));
                     localStorage.setItem("librify_locations", JSON.stringify(userLocations));
                     localStorage.setItem("librify_members", JSON.stringify(householdMembers));
                     localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
+                    localStorage.setItem("librify_borrowers", JSON.stringify(userBorrowers));
 
                     renderTagLibrarySettings();
                     renderLocationLibrarySettings();
                     renderMemberLibrarySettings();
+                    renderBorrowerLibrarySettings();
                     renderQuickFilterPillsModule();
                 }
             } catch (e) {
@@ -737,6 +754,7 @@
         renderTagLibrarySettings();
         renderLocationLibrarySettings();
         renderMemberLibrarySettings();
+        renderBorrowerLibrarySettings();
         renderQuickFilterPillsModule();
         renderHomeTab();
         loadSyncedSettingsFromServer();
@@ -1318,10 +1336,81 @@
                             <p class="text-gray-600">Borrower: <b>${book.borrower || 'Unknown'}</b> ${book.dueDate ? `| Due: <b>${book.dueDate}</b>` : ''}</p>
                             ${isOverdue ? '<span class="inline-block mt-1 bg-red-600 text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full">Overdue</span>' : (isDueSoon ? '<span class="inline-block mt-1 bg-amber-500 text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full">Due Soon</span>' : '')}
                         </div>
-                        <button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors shadow-2xs">Manage</button>
+                        <div class="flex flex-col gap-1 shrink-0">
+                            <button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors shadow-2xs">Manage</button>
+                            <button onclick="renewBookQuick('${book.uniqueId}', '${book.dueDate || ''}', this)" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-indigo-600 cursor-pointer hover:bg-indigo-50 transition-colors shadow-2xs flex items-center justify-center gap-1"><i data-lucide="refresh-cw" class="w-2.5 h-2.5"></i>Renew</button>
+                        </div>
                     `;
                     checkedOutContainer.appendChild(item);
                 });
+            }
+        }
+
+        async function loadLoanHistoryForBook(isbn) {
+            const card = document.getElementById("loan-history-card");
+            const list = document.getElementById("loan-history-list");
+            if (!card || !list || !isbn) return;
+
+            try {
+                const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLoanHistory&isbn=${encodeURIComponent(isbn)}&token=${encodeURIComponent(SHARED_SECRET)}`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const history = data.history || [];
+
+                if (history.length === 0) {
+                    card.classList.add("hidden");
+                    return;
+                }
+
+                card.classList.remove("hidden");
+                list.innerHTML = "";
+                history.forEach(entry => {
+                    const row = document.createElement("div");
+                    row.className = "text-[11px] text-gray-600 bg-gray-50 rounded-lg px-2.5 py-1.5 flex justify-between items-center gap-2";
+                    row.innerHTML = `<span class="font-semibold text-gray-800">${entry.borrower || 'Unknown'}</span><span class="text-gray-400">${entry.dateBorrowed || '?'} → ${entry.returnedDate || '?'}</span>`;
+                    list.appendChild(row);
+                });
+            } catch (e) {
+                console.error("Error loading loan history:", e);
+            }
+        }
+
+        async function renewBookQuick(uniqueId, currentDueDateStr, btnEl) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let base = today;
+            if (currentDueDateStr) {
+                const existing = new Date(currentDueDateStr);
+                if (!isNaN(existing.getTime()) && existing > today) base = existing;
+            }
+            const target = new Date(base);
+            target.setDate(target.getDate() + 7);
+            const newDueDate = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+
+            const originalText = btnEl ? btnEl.innerHTML : "";
+            if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = "..."; }
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "renewBook",
+                        token: SHARED_SECRET,
+                        uniqueId: uniqueId,
+                        newDueDate: newDueDate
+                    })
+                });
+                const resData = await response.json();
+                if (resData.status === "success") {
+                    await fetchAllBooksFromGoogleSheet();
+                } else {
+                    alert("Renew failed. Please try again.");
+                    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalText; }
+                }
+            } catch (e) {
+                alert("Renew failed: " + e.message);
+                if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalText; }
             }
         }
 
@@ -1450,6 +1539,7 @@
                 currentScannedBook.borrower = document.getElementById("input-borrower").value;
                 currentScannedBook.dueDate = document.getElementById("input-duedate").value;
                 currentScannedBook.reader = "";
+                ensureBorrowerSaved(currentScannedBook.borrower);
                 if(!currentScannedBook.dateBorrowed) {
                     const today = new Date();
                     currentScannedBook.dateBorrowed = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -1997,7 +2087,7 @@
         }
 
         function switchSettingsSubTab(tab) {
-            const tabs = ['members', 'locations', 'tags', 'data'];
+            const tabs = ['members', 'locations', 'tags', 'borrowers', 'data'];
             const activeClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full bg-indigo-600 text-white cursor-pointer transition-all flex items-center justify-center gap-1";
             const inactiveClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer transition-all flex items-center justify-center gap-1";
 
@@ -2249,6 +2339,65 @@
         
             if (selectedReader) {
                 d.value = selectedReader;
+            }
+        }
+
+        // Borrowers are a simpler "suggestions" list than tags/locations — no rename/cascade,
+        // since deleting a saved name just stops it being suggested going forward and
+        // doesn't need to retroactively touch already-checked-out books (loan history
+        // captures the borrower name at return time regardless).
+        function renderBorrowerLibrarySettings() {
+            const container = document.getElementById("borrower-library-list");
+            if (!container) return;
+            container.innerHTML = "";
+            userBorrowers.forEach((b, i) => {
+                const row = document.createElement("div");
+                row.className = "flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded-xl text-xs font-medium";
+                row.innerHTML = `
+                    <span class="flex items-center gap-1.5"><i data-lucide="user-check" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">${b}</span></span>
+                    <button onclick="deleteBorrower(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 cursor-pointer">&times;</button>
+                `;
+                container.appendChild(row);
+            });
+            refreshBorrowerDatalist();
+        }
+
+        function addNewBorrower() {
+            const input = document.getElementById("new-borrower-input");
+            const v = input.value.trim();
+            if (v && !userBorrowers.includes(v)) {
+                userBorrowers.push(v);
+                input.value = "";
+                syncSettingsToServer();
+                renderBorrowerLibrarySettings();
+            }
+        }
+
+        function deleteBorrower(i) {
+            userBorrowers.splice(i, 1);
+            syncSettingsToServer();
+            renderBorrowerLibrarySettings();
+        }
+
+        function refreshBorrowerDatalist() {
+            const datalist = document.getElementById("borrower-datalist");
+            if (!datalist) return;
+            datalist.innerHTML = "";
+            userBorrowers.forEach(b => {
+                const opt = document.createElement("option");
+                opt.value = b;
+                datalist.appendChild(opt);
+            });
+        }
+
+        // If a book gets saved with a borrower name that isn't already saved, quietly add
+        // it to the suggestions list so it's available next time.
+        function ensureBorrowerSaved(name) {
+            const trimmed = (name || "").trim();
+            if (trimmed && !userBorrowers.includes(trimmed)) {
+                userBorrowers.push(trimmed);
+                syncSettingsToServer();
+                renderBorrowerLibrarySettings();
             }
         }
 
@@ -2996,11 +3145,17 @@
                         <div id="borrower-input-container" class="hidden space-y-2">
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase">Borrower Name</label>
-                                <input type="text" id="input-borrower" placeholder="Enter friend's name..." class="w-full bg-white border-0 rounded-lg p-2 text-xs">
+                                <input type="text" id="input-borrower" list="borrower-datalist" placeholder="Enter friend's name..." class="w-full bg-white border-0 rounded-lg p-2 text-xs">
+                                <datalist id="borrower-datalist"></datalist>
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 uppercase">Due Date</label>
                                 <input type="date" id="input-duedate" class="w-full bg-white border-0 rounded-lg p-2 text-xs">
+                                <div class="flex gap-1.5 pt-1.5">
+                                    <button type="button" onclick="setDueDatePreset(7)" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">1 Week</button>
+                                    <button type="button" onclick="setDueDatePreset(14)" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">2 Weeks</button>
+                                    <button type="button" onclick="setDueDatePreset(30)" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">1 Month</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3019,6 +3174,11 @@
                     </div>
                 </div>
 
+                <div id="loan-history-card" class="hidden bg-white rounded-2xl shadow-sm p-4 text-left space-y-2">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="history" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Loan History</span></h3>
+                    <div id="loan-history-list" class="space-y-1.5"></div>
+                </div>
+
                 <div class="bg-white rounded-2xl shadow-sm p-4 text-left space-y-1">
                     <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Synopsis${missingBadge(currentScannedBook.description)}</label>
                     <textarea id="input-description" rows="4" class="w-full text-xs text-gray-600 leading-relaxed border-0 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${missingFieldClass(currentScannedBook.description)}"></textarea>
@@ -3026,6 +3186,7 @@
             `; 
             populateBookDetailFields();
             setupFormInteractions(); 
+            loadLoanHistoryForBook(currentScannedBook.isbn);
         }
 
         // Sets the values of the newly-editable core fields from currentScannedBook.
@@ -3046,6 +3207,15 @@
             document.getElementById("input-description").value = isMissingValue(currentScannedBook.description) ? "" : currentScannedBook.description;
         }
         
+        function setDueDatePreset(days) {
+            const target = new Date();
+            target.setDate(target.getDate() + days);
+            const yyyy = target.getFullYear();
+            const mm = String(target.getMonth() + 1).padStart(2, '0');
+            const dd = String(target.getDate()).padStart(2, '0');
+            document.getElementById("input-duedate").value = `${yyyy}-${mm}-${dd}`;
+        }
+
         function toggleStatusDependentFields() {
             const statusSelect = document.getElementById("input-status");
             const borrowerContainer = document.getElementById("borrower-input-container");
