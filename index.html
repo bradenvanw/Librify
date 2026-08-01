@@ -133,6 +133,7 @@
                     <button id="settings-subtab-tags" onclick="switchSettingsSubTab('tags')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Tags</span></button>
                     <button id="settings-subtab-borrowers" onclick="switchSettingsSubTab('borrowers')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="user-check" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Borrowers</span></button>
                     <button id="settings-subtab-data" onclick="switchSettingsSubTab('data')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Data</span></button>
+                    <button id="settings-subtab-hardcover" onclick="switchSettingsSubTab('hardcover')" class="flex-1 text-center py-1.5 text-[11px] font-bold rounded-full cursor-pointer transition-all flex items-center justify-center gap-1"><i data-lucide="download-cloud" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Hardcover</span></button>
                 </div>
 
                 <div class="p-4 overflow-y-auto space-y-3">
@@ -188,6 +189,27 @@
                             <button onclick="addNewBorrower()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer">Add</button>
                         </div>
                         <div id="borrower-library-list" class="flex flex-col gap-1.5 pt-1"></div>
+                    </div>
+
+                    <!-- Hardcover Import Panel -->
+                    <div id="settings-panel-hardcover" class="space-y-3 hidden">
+                        <p class="text-[11px] text-gray-400 italic">One-time import from a member's existing Hardcover account — useful when someone new joins the household library so they aren't starting from zero. Requires their Hardcover token to already be configured on the backend (HARDCOVER_TOKEN_&lt;NAME&gt; script property). Safe to run more than once — books already imported won't be duplicated.</p>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Import for</label>
+                            <select id="hardcover-import-member-select" class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-medium"></select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-700">
+                                <input type="checkbox" id="hardcover-import-wtr" checked class="rounded"> Want to Read list
+                            </label>
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-700">
+                                <input type="checkbox" id="hardcover-import-read" checked class="rounded"> Read history
+                            </label>
+                        </div>
+                        <button onclick="runHardcoverImport()" id="hardcover-import-button" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                            <i data-lucide="download-cloud" class="w-4 h-4 shrink-0"></i><span class="leading-none">Import from Hardcover</span>
+                        </button>
+                        <div id="hardcover-import-result" class="text-xs"></div>
                     </div>
                 </div>
             </div>
@@ -252,6 +274,9 @@
                         </button>
                         <button onclick="openBulkTagsModal('remove')" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
                             <i data-lucide="tag" class="w-3 h-3"></i> Remove Tags
+                        </button>
+                        <button onclick="bulkRefreshFromHardcover()" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-[11px] transition-colors flex items-center gap-1 cursor-pointer">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh from Hardcover
                         </button>
                         <button onclick="toggleBulkEditMode()" class="text-gray-500 hover:text-gray-700 font-semibold px-2 py-1.5 rounded-lg text-[11px] transition-colors cursor-pointer">
                             Cancel
@@ -341,6 +366,8 @@
             <div id="home-member-content" class="space-y-6 hidden">
                 <h2 id="home-member-heading" class="text-lg font-serif font-semibold text-gray-800"></h2>
 
+                <div id="home-reading-stats-card" class="bg-white/70 rounded-2xl p-4 space-y-3"></div>
+
                 <div class="space-y-3">
                     <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wider flex items-center gap-2">
                         <i data-lucide="book-open" class="w-4 h-4 shrink-0"></i><span class="leading-none">Currently Reading</span>
@@ -360,6 +387,14 @@
         <!-- ================= FLOATING ADD BOOK BUTTON (SPEED DIAL) ================= -->
         <div class="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
             <div id="fab-options" class="hidden flex-col items-end gap-3">
+                <button onclick="startFabAction('libraryloan')" class="flex items-center gap-2.5 cursor-pointer group">
+                    <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Library Loan</span>
+                    <span class="w-11 h-11 rounded-full bg-purple-500 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="library" class="w-4 h-4 text-white"></i></span>
+                </button>
+                <button onclick="startFabAction('wanttoread')" class="flex items-center gap-2.5 cursor-pointer group">
+                    <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Want to Read</span>
+                    <span class="w-11 h-11 rounded-full bg-emerald-500 shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="bookmark" class="w-4 h-4 text-white"></i></span>
+                </button>
                 <button onclick="startFabAction('manual')" class="flex items-center gap-2.5 cursor-pointer group">
                     <span class="text-xs font-semibold bg-white px-2.5 py-1.5 rounded-lg shadow-md text-gray-700">Add Manually</span>
                     <span class="w-11 h-11 rounded-full bg-white shadow-lg flex items-center justify-center group-hover:scale-105 transition-transform"><i data-lucide="edit-3" class="w-4 h-4 text-gray-700"></i></span>
@@ -537,7 +572,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMLokYCgCJyPz-DSW4-ql9e70l6sJ2HdZ5Ft_36yxfavgLwDRJvcFAzSd2d5tbrpQm/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8MbdeJwhcPXQjw4TGzIVqBVZH4Jq_v5irabgkw6OQlZrBn-YaRmPpzbb2YFoeDJwD/exec";
         // Must match the SHARED_SECRET value set in the Apps Script's Script Properties.
         // NOTE: if this repo is public, this string is public too — it only stops casual/
         // automated access, not anyone who reads the source. Make the repo private for
@@ -589,12 +624,26 @@
         let activeCopiesData = [];
         let selectedUniqueId = "";
         let pendingSelectUniqueId = null;
+        // The Status this copy had at the moment it was loaded into the form — compared
+        // against the Status being saved so we only fire a Hardcover sync on an actual
+        // transition (e.g. "Available" -> "Currently Reading"), not on every save of a
+        // book that was already Currently Reading.
+        let statusAtLoad = "Available";
         // Set when a scanned barcode fails to resolve on its own, so that if the user then
         // manually resolves it (via title search or linking to an existing library book),
         // we can remember "this barcode = this book" for future scans.
         let pendingAliasSourceIsbn = null;
         let bulkEditMode = false;
         let quickAddMode = false;
+        // "physical" (default) = the normal Add Book flow, ends in a Books-sheet row.
+        // "wantToRead" = set by the Want to Read FAB option — selecting a candidate
+        // shows a lightweight confirm screen instead of the full edit form, and never
+        // creates a Books row at all.
+        // "libraryLoan" = set by the Library Loan FAB option — same idea, but creates a
+        // row in the separate LibraryLoans sheet instead (reader + library + due date).
+        // Reset to "physical" whenever the book detail modal closes, so it can never
+        // leak into an unrelated later flow.
+        let addBookIntent = "physical";
         let quickAddDefaultLocation = "";
         let quickAddDefaultTags = [];
         let bulkSelectedUniqueIds = new Set();
@@ -615,11 +664,39 @@
             }
         }
 
+        // Same idea as loadArraySetting, but for a plain object (used for
+        // wantToReadOrder, keyed by member name).
+        function loadObjectSetting(key, fallback) {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(key));
+                return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
         let userTags = loadArraySetting("librify_tags", ["To Read", "Favorite", "Hardcover", "Borrowed"]);
         let userLocations = loadArraySetting("librify_locations", ["Living Room Main", "Office Bookshelf", "Bedroom Table", "Unassigned / Pile"]);
         let householdMembers = loadArraySetting("librify_members", ["Self", "Partner", "Child"]);
         let visibleDashboardFilters = loadArraySetting("librify_visible_filters", [...userLocations, ...userTags]);
         let userBorrowers = loadArraySetting("librify_borrowers", []);
+        // Books not yet in the physical library that someone wants to read (separate from
+        // the "<Member>: Want to Read" tag used for books already owned).
+        let wantToReadCache = [];
+        // Per-member priority order for the merged want-to-read list (owned + not-owned).
+        // Keys are "owned:<uniqueId>" or "wtr:<isbn>" — see Code.gs for the full scheme.
+        let wantToReadOrder = loadObjectSetting("librify_wtr_order", {});
+        // Active books borrowed from a public library — lives in its own sheet, not the
+        // Books sheet, since a library loan was never part of the physical collection.
+        let libraryLoansCache = [];
+        // Finished-book records — used for the home page reading stats (lifetime/yearly
+        // counts, most-read book, average time to finish). Owned-book completions live in
+        // readingHistoryCache; library-loan completions in libraryLoanHistoryCache — stats
+        // combine both, since both represent a book someone actually finished.
+        let readingHistoryCache = [];
+        let libraryLoanHistoryCache = [];
+        // Per-member annual reading goal (just a number of books), shown on the stats card.
+        let readingGoals = loadObjectSetting("librify_reading_goals", {});
 
         async function syncSettingsToServer() {
             const settingsPayload = {
@@ -710,12 +787,16 @@
                     if (Array.isArray(settings.householdMembers)) householdMembers = settings.householdMembers;
                     if (Array.isArray(settings.visibleDashboardFilters)) visibleDashboardFilters = settings.visibleDashboardFilters;
                     if (Array.isArray(settings.userBorrowers)) userBorrowers = settings.userBorrowers;
+                    if (settings.wantToReadOrder && typeof settings.wantToReadOrder === "object") wantToReadOrder = settings.wantToReadOrder;
+                    if (settings.readingGoals && typeof settings.readingGoals === "object") readingGoals = settings.readingGoals;
 
                     localStorage.setItem("librify_tags", JSON.stringify(userTags));
                     localStorage.setItem("librify_locations", JSON.stringify(userLocations));
                     localStorage.setItem("librify_members", JSON.stringify(householdMembers));
                     localStorage.setItem("librify_visible_filters", JSON.stringify(visibleDashboardFilters));
                     localStorage.setItem("librify_borrowers", JSON.stringify(userBorrowers));
+                    localStorage.setItem("librify_wtr_order", JSON.stringify(wantToReadOrder));
+                    localStorage.setItem("librify_reading_goals", JSON.stringify(readingGoals));
 
                     renderTagLibrarySettings();
                     renderLocationLibrarySettings();
@@ -884,6 +965,13 @@
             return diffDays >= 0 && diffDays <= 3;
         }
 
+        // A Books-sheet row counts as "being read" only via "Currently Reading" now —
+        // Library Loan books moved to their own sheet (see libraryLoansCache) and are
+        // merged in separately wherever this matters (home page reading list, stats).
+        function isReadingStatus(status) {
+            return status === "Currently Reading";
+        }
+
         function runDatabaseAnalyticsEngine() {
             if (!globalCatalogCache || globalCatalogCache.length === 0) {
                 updateAnalyticsDashboardUI(0, 0, 0, 0);
@@ -898,8 +986,9 @@
             globalCatalogCache.forEach(b => {
                 if (b.title) uniqueTitlesMap.add(b.title.trim().toLowerCase());
                 if (b.seriesName && b.seriesName.trim() !== "") uniqueSeriesMap.add(b.seriesName.trim().toLowerCase());
-                if (b.status === "Currently Reading") readingCount++;
+                if (isReadingStatus(b.status)) readingCount++;
             });
+            readingCount += libraryLoansCache.length;
             
             const totalTitles = uniqueTitlesMap.size;
             const totalSeries = uniqueSeriesMap.size;
@@ -919,8 +1008,43 @@
             
             try {
                 const cacheBuster = `&_cb=${new Date().getTime()}`;
-                const resp = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll&token=${encodeURIComponent(SHARED_SECRET)}${cacheBuster}`);
+                const [resp, wtrResp, loansResp, historyResp, loanHistoryResp] = await Promise.all([
+                    fetch(`${GOOGLE_SCRIPT_URL}?action=getAll&token=${encodeURIComponent(SHARED_SECRET)}${cacheBuster}`),
+                    fetch(`${GOOGLE_SCRIPT_URL}?action=getWantToRead&token=${encodeURIComponent(SHARED_SECRET)}${cacheBuster}`).catch(() => null),
+                    fetch(`${GOOGLE_SCRIPT_URL}?action=getLibraryLoans&token=${encodeURIComponent(SHARED_SECRET)}${cacheBuster}`).catch(() => null),
+                    fetch(`${GOOGLE_SCRIPT_URL}?action=getAllReadingHistory&token=${encodeURIComponent(SHARED_SECRET)}${cacheBuster}`).catch(() => null),
+                    fetch(`${GOOGLE_SCRIPT_URL}?action=getLibraryLoanHistory&token=${encodeURIComponent(SHARED_SECRET)}${cacheBuster}`).catch(() => null)
+                ]);
                 if (!resp.ok) throw new Error(`HTTP Error Status: ${resp.status}`);
+
+                if (wtrResp && wtrResp.ok) {
+                    try {
+                        const wtrData = await wtrResp.json();
+                        wantToReadCache = wtrData.data || [];
+                    } catch (e) { /* keep the previous cache on parse failure */ }
+                }
+
+                if (loansResp && loansResp.ok) {
+                    try {
+                        const loansData = await loansResp.json();
+                        libraryLoansCache = loansData.data || [];
+                    } catch (e) { /* keep the previous cache on parse failure */ }
+                }
+
+                if (historyResp && historyResp.ok) {
+                    try {
+                        const historyData = await historyResp.json();
+                        readingHistoryCache = historyData.data || [];
+                    } catch (e) { /* keep the previous cache on parse failure */ }
+                }
+
+                if (loanHistoryResp && loanHistoryResp.ok) {
+                    try {
+                        const loanHistoryData = await loanHistoryResp.json();
+                        libraryLoanHistoryCache = loanHistoryData.data || [];
+                    } catch (e) { /* keep the previous cache on parse failure */ }
+                }
+
                 const responseData = await resp.json();
                 
                 const booksList = responseData.data || responseData.books || (Array.isArray(responseData) ? responseData : null);
@@ -1273,6 +1397,52 @@
             }
         }
 
+        // Refreshes cover/pages/description/genre/series from Hardcover for every
+        // selected book, capped server-side at 40 per call (see refreshBooksFromHardcover
+        // in Code.gs) to stay within Apps Script's execution window and Hardcover's rate
+        // limit. Never touches status, reader, tags, notes, or location.
+        async function bulkRefreshFromHardcover() {
+            if (bulkSelectedUniqueIds.size === 0) { alert("Select at least one book first."); return; }
+
+            const count = bulkSelectedUniqueIds.size;
+            if (count > 40) {
+                alert(`You've selected ${count} books — refresh 40 or fewer at a time to avoid the request timing out partway through.`);
+                return;
+            }
+
+            searchStatusMessage.innerHTML = `<i data-lucide="loader" class="w-3 h-3 inline shrink-0 animate-spin"></i> Refreshing ${count} book(s) from Hardcover — this may take a moment...`;
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "refreshBooksFromHardcover",
+                        token: SHARED_SECRET,
+                        uniqueIds: Array.from(bulkSelectedUniqueIds)
+                    })
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    alert(`Refresh failed: ${resData.message || "Unknown error"}`);
+                    return;
+                }
+
+                const results = resData.results || {};
+                const isbns = Object.keys(results);
+                const succeeded = isbns.filter(isbn => results[isbn].status === "success").length;
+                const skipped = isbns.filter(isbn => results[isbn].status === "skipped").length;
+
+                toggleBulkEditMode();
+                await fetchAllBooksFromGoogleSheet();
+                searchStatusMessage.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline shrink-0"></i> Refreshed ${succeeded} book(s) from Hardcover${skipped > 0 ? ` (${skipped} had no Hardcover match)` : ''}.`;
+            } catch (e) {
+                console.error("Error running bulk Hardcover refresh:", e);
+                alert("Bulk refresh failed. Please try again.");
+            }
+        }
+
         function renderCheckoutTab() {
             const checkedOutContainer = document.getElementById("checkedout-list-container");
             const borrowerSummaryCard = document.getElementById("checkout-borrower-summary-card");
@@ -1433,31 +1603,246 @@
             renderHomeMemberContent();
         }
 
+        // Builds one merged want-to-read item for an owned (tagged) book.
+        function wantToReadItemFromOwnedBook_(book) {
+            return {
+                key: `owned:${book.uniqueId}`,
+                title: book.title,
+                authors: book.authors,
+                coverImage: book.coverImage || book.thumbnail || "",
+                isbn: book.isbn,
+                uniqueId: book.uniqueId,
+                source: "owned"
+            };
+        }
+
+        // Builds one merged want-to-read item for a not-owned (WantToRead sheet) entry.
+        function wantToReadItemFromWtrEntry_(entry) {
+            return {
+                key: `wtr:${entry.isbn}`,
+                title: entry.title,
+                authors: entry.authors,
+                coverImage: entry.coverImage || "",
+                isbn: entry.isbn,
+                uniqueId: null,
+                source: "wtr"
+            };
+        }
+
+        // One member's full want-to-read list — owned + not-owned merged, ordered by
+        // their saved priority (wantToReadOrder), with any not-yet-ranked items (e.g.
+        // just added) appended at the end rather than dropped.
+        function buildWantToReadItemsForMember(member) {
+            const wantTag = wantToReadTagFor(member);
+            const ownedItems = globalCatalogCache
+                .filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(wantTag))
+                .map(wantToReadItemFromOwnedBook_);
+            const wtrItems = wantToReadCache
+                .filter(w => (w.member || "").toString().trim() === member)
+                .map(wantToReadItemFromWtrEntry_);
+
+            const merged = [...ownedItems, ...wtrItems];
+            const order = wantToReadOrder[member] || [];
+            merged.sort((a, b) => {
+                const ai = order.indexOf(a.key);
+                const bi = order.indexOf(b.key);
+                if (ai === -1 && bi === -1) return 0;
+                if (ai === -1) return 1;
+                if (bi === -1) return -1;
+                return ai - bi;
+            });
+            return merged;
+        }
+
+        // Combined view across everyone — no single priority ranking makes sense here
+        // (whose priority would win?), so this stays in natural/fetch order, same as
+        // before, just now including not-owned entries too. Not-owned entries with
+        // multiple wanters are shown once, with all wanters listed.
+        function buildWantToReadItemsForEveryone() {
+            const allWantTags = householdMembers.map(m => wantToReadTagFor(m));
+            const ownedItems = globalCatalogCache
+                .filter(b => {
+                    const bookTags = (b.tags || "").toString().split(",").map(t => t.trim());
+                    return allWantTags.some(wt => bookTags.includes(wt));
+                })
+                .map(b => {
+                    const bookTags = (b.tags || "").toString().split(",").map(t => t.trim());
+                    const wanters = householdMembers.filter(m => bookTags.includes(wantToReadTagFor(m)));
+                    return { ...wantToReadItemFromOwnedBook_(b), wanters };
+                });
+
+            const wtrByIsbn = {};
+            wantToReadCache.forEach(w => {
+                const isbn = (w.isbn || "").toString().trim();
+                if (!isbn) return;
+                if (!wtrByIsbn[isbn]) wtrByIsbn[isbn] = { entry: w, wanters: [] };
+                wtrByIsbn[isbn].wanters.push((w.member || "").toString().trim());
+            });
+            const wtrItems = Object.values(wtrByIsbn).map(({ entry, wanters }) => ({
+                ...wantToReadItemFromWtrEntry_(entry), wanters
+            }));
+
+            return [...ownedItems, ...wtrItems];
+        }
+
+        // Combines owned-book finishes and library-loan finishes into one list — both
+        // represent a book someone actually finished, just with a different physical-
+        // ownership story underneath (same principle as the Currently Reading merge).
+        function allFinishedEntriesForMember(member) {
+            const owned = readingHistoryCache.filter(h => (h.member || "").toString().trim() === member);
+            const loaned = libraryLoanHistoryCache.filter(h => (h.reader || "").toString().trim() === member);
+            return [...owned, ...loaned];
+        }
+
+        function computeReadingStats(member) {
+            const isEveryone = member === EVERYONE_USER;
+            const entries = isEveryone
+                ? [...readingHistoryCache, ...libraryLoanHistoryCache]
+                : allFinishedEntriesForMember(member);
+
+            const currentYear = new Date().getFullYear();
+            const lifetimeCount = entries.length;
+            const thisYearCount = entries.filter(e => {
+                const d = e.finishedDate ? new Date(e.finishedDate) : null;
+                return d && !isNaN(d.getTime()) && d.getFullYear() === currentYear;
+            }).length;
+
+            const wantToReadCount = isEveryone
+                ? buildWantToReadItemsForEveryone().length
+                : buildWantToReadItemsForMember(member).length;
+
+            // % of the physical library read — owned books only, library loans
+            // intentionally excluded since those aren't "my library."
+            const ownedIsbns = new Set(globalCatalogCache.map(b => (b.isbn || "").toString().trim()).filter(Boolean));
+            const relevantHistory = isEveryone ? readingHistoryCache : readingHistoryCache.filter(h => (h.member || "").toString().trim() === member);
+            const readOwnedIsbns = new Set(relevantHistory.map(h => (h.isbn || "").toString().trim()).filter(isbn => ownedIsbns.has(isbn)));
+            const percentRead = ownedIsbns.size > 0 ? Math.round((readOwnedIsbns.size / ownedIsbns.size) * 100) : 0;
+
+            // Most-read book: group by title+isbn, find the highest finish count (re-reads).
+            const countByBook = {};
+            entries.forEach(e => {
+                const key = (e.title || "Unknown") + "|" + (e.isbn || "");
+                if (!countByBook[key]) countByBook[key] = { title: e.title || "Unknown", count: 0 };
+                countByBook[key].count++;
+            });
+            let mostRead = null;
+            Object.values(countByBook).forEach(b => {
+                if (b.count > 1 && (!mostRead || b.count > mostRead.count)) mostRead = b;
+            });
+
+            // Average days to finish, across entries that actually have a value — older
+            // books finished before Date Started tracking existed just won't.
+            const daysValues = entries.map(e => {
+                const n = parseInt(e.daysToFinish, 10);
+                return isNaN(n) ? null : n;
+            }).filter(n => n !== null);
+            const avgDays = daysValues.length > 0 ? Math.round(daysValues.reduce((a, b) => a + b, 0) / daysValues.length) : null;
+
+            const goal = !isEveryone ? (readingGoals[member] || null) : null;
+
+            return { lifetimeCount, thisYearCount, wantToReadCount, percentRead, mostRead, avgDays, goal };
+        }
+
+        function renderReadingStatsCard() {
+            const card = document.getElementById("home-reading-stats-card");
+            if (!card || !currentActiveUser) { if (card) card.innerHTML = ""; return; }
+
+            const isEveryone = currentActiveUser === EVERYONE_USER;
+            const stats = computeReadingStats(currentActiveUser);
+
+            const goalHTML = !isEveryone ? `
+                <div>
+                    <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Reading Goal</span>
+                    ${stats.goal ? `
+                        <span class="text-sm font-black text-indigo-600">${stats.thisYearCount} / ${stats.goal}</span>
+                        <button onclick="editReadingGoal()" class="text-gray-400 hover:text-indigo-600 cursor-pointer ml-0.5"><i data-lucide="pencil" class="w-2.5 h-2.5 inline"></i></button>
+                    ` : `
+                        <button onclick="editReadingGoal()" class="text-[11px] text-indigo-600 font-semibold cursor-pointer hover:underline">Set a goal</button>
+                    `}
+                </div>` : '';
+
+            card.innerHTML = `
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="bar-chart-2" class="w-3 h-3 shrink-0"></i><span class="leading-none">Reading Stats</span></h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div>
+                        <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Read (Lifetime)</span>
+                        <span class="text-sm font-black text-gray-800">${stats.lifetimeCount}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Read (${new Date().getFullYear()})</span>
+                        <span class="text-sm font-black text-gray-800">${stats.thisYearCount}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Want to Read</span>
+                        <span class="text-sm font-black text-emerald-600">${stats.wantToReadCount}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Library Read</span>
+                        <span class="text-sm font-black text-gray-800">${stats.percentRead}%</span>
+                    </div>
+                    ${goalHTML}
+                    <div>
+                        <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Avg. Days to Finish</span>
+                        <span class="text-sm font-black text-gray-800">${stats.avgDays !== null ? stats.avgDays : '—'}</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2">
+                        <span class="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Most Read</span>
+                        <span class="text-sm font-black text-gray-800 truncate block">${stats.mostRead ? `${stats.mostRead.title} (${stats.mostRead.count}\u00d7)` : 'No repeat reads yet'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function editReadingGoal() {
+            if (!currentActiveUser || currentActiveUser === EVERYONE_USER) return;
+            const current = readingGoals[currentActiveUser] || "";
+            const input = prompt(`Set ${currentActiveUser}'s reading goal for this year (number of books):`, current);
+            if (input === null) return;
+            const goal = parseInt(input, 10);
+            if (isNaN(goal) || goal < 0) { alert("Enter a valid number."); return; }
+
+            readingGoals[currentActiveUser] = goal;
+            localStorage.setItem("librify_reading_goals", JSON.stringify(readingGoals));
+            renderReadingStatsCard();
+
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: "setReadingGoal", token: SHARED_SECRET, member: currentActiveUser, goal: goal })
+                });
+            } catch (e) {
+                console.warn("Failed to save reading goal:", e.message);
+            }
+        }
+
         function renderHomeMemberContent() {
+            renderReadingStatsCard();
             const readingContainer = document.getElementById("home-reading-list-container");
             const wantToReadContainer = document.getElementById("home-wanttoread-list-container");
             readingContainer.innerHTML = "";
             wantToReadContainer.innerHTML = "";
 
             const isEveryone = currentActiveUser === EVERYONE_USER;
-            let readingBooks, wantToReadBooks, emptyWantMsg, emptyReadingMsg;
+            let readingBooks, wantToReadItems, emptyWantMsg, emptyReadingMsg;
 
             if (isEveryone) {
-                readingBooks = globalCatalogCache.filter(b => b.status === "Currently Reading");
-                const allWantTags = householdMembers.map(m => wantToReadTagFor(m));
-                wantToReadBooks = globalCatalogCache.filter(b => {
-                    const bookTags = (b.tags || "").toString().split(",").map(t => t.trim());
-                    return allWantTags.some(wt => bookTags.includes(wt));
-                });
+                readingBooks = [
+                    ...globalCatalogCache.filter(b => isReadingStatus(b.status)).map(b => ({ ...b, _source: "owned" })),
+                    ...libraryLoansCache.map(l => ({ ...l, _source: "libraryLoan" }))
+                ];
+                wantToReadItems = buildWantToReadItemsForEveryone();
                 emptyReadingMsg = "No one is currently reading anything.";
                 emptyWantMsg = "No books on anyone's want-to-read list yet.";
             } else {
                 if (!currentActiveUser || !householdMembers.includes(currentActiveUser)) return;
-                readingBooks = globalCatalogCache.filter(b => b.status === "Currently Reading" && b.reader === currentActiveUser);
-                const wantTag = wantToReadTagFor(currentActiveUser);
-                wantToReadBooks = globalCatalogCache.filter(b => (b.tags || "").toString().split(",").map(t => t.trim()).includes(wantTag));
+                readingBooks = [
+                    ...globalCatalogCache.filter(b => isReadingStatus(b.status) && b.reader === currentActiveUser).map(b => ({ ...b, _source: "owned" })),
+                    ...libraryLoansCache.filter(l => l.reader === currentActiveUser).map(l => ({ ...l, _source: "libraryLoan" }))
+                ];
+                wantToReadItems = buildWantToReadItemsForMember(currentActiveUser);
                 emptyReadingMsg = "Not currently reading anything.";
-                emptyWantMsg = `No books on the want-to-read list yet. Add the "${wantTag}" tag to a book to add it here.`;
+                emptyWantMsg = `No books on your want-to-read list yet — use the "+" button below and choose "Want to Read".`;
             }
 
             if (readingBooks.length === 0) {
@@ -1465,42 +1850,131 @@
             } else {
                 readingBooks.forEach(book => {
                     const item = document.createElement("div");
-                    item.className = "flex items-center justify-between bg-amber-50/60 p-3 rounded-xl text-xs cursor-pointer transition-colors";
-                    const subline = isEveryone
-                        ? `<p class="text-amber-700 font-medium">Reader: <b>${book.reader || 'Unassigned'}</b></p>`
-                        : `<p class="text-amber-700 font-medium">by ${book.authors || 'Unknown Author'}</p>`;
+                    const isLibraryLoan = book._source === "libraryLoan";
+                    item.className = `flex items-center justify-between ${isLibraryLoan ? 'bg-purple-50/60' : 'bg-amber-50/60'} p-3 rounded-xl text-xs cursor-pointer transition-colors`;
+                    let subline = isEveryone
+                        ? `<p class="${isLibraryLoan ? 'text-purple-700' : 'text-amber-700'} font-medium">Reader: <b>${book.reader || 'Unassigned'}</b></p>`
+                        : `<p class="${isLibraryLoan ? 'text-purple-700' : 'text-amber-700'} font-medium">by ${book.authors || 'Unknown Author'}</p>`;
+                    if (isLibraryLoan) {
+                        subline += `<p class="text-[10px] text-purple-500">${book.libraryName ? book.libraryName + ' \u2022 ' : ''}Library Loan${book.dueDate ? ' \u2022 Due ' + book.dueDate : ''}</p>`;
+                    }
+                    const actionButton = isLibraryLoan
+                        ? `<button onclick="manageLibraryLoan('${book.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-purple-600 cursor-pointer hover:bg-purple-50 transition-colors shadow-2xs whitespace-nowrap">Manage</button>`
+                        : `<button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-amber-600 cursor-pointer hover:bg-amber-50 transition-colors shadow-2xs whitespace-nowrap">Manage</button>`;
                     item.innerHTML = `
                         <div>
                             <p class="font-bold text-gray-900">${book.title}</p>
                             ${subline}
                         </div>
-                        <button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-amber-600 cursor-pointer hover:bg-amber-50 transition-colors shadow-2xs">Manage</button>
+                        ${actionButton}
                     `;
                     readingContainer.appendChild(item);
                 });
             }
 
-            if (wantToReadBooks.length === 0) {
+            if (wantToReadItems.length === 0) {
                 wantToReadContainer.innerHTML = `<div class="text-xs text-gray-400 italic py-2">${emptyWantMsg}</div>`;
             } else {
-                wantToReadBooks.forEach(book => {
+                wantToReadItems.forEach((wItem, idx) => {
                     const item = document.createElement("div");
-                    item.className = "flex items-center justify-between bg-emerald-50/60 p-3 rounded-xl text-xs cursor-pointer transition-colors";
-                    let subline = `<p class="text-emerald-700 font-medium">by ${book.authors || 'Unknown Author'}</p>`;
-                    if (isEveryone) {
-                        const bookTags = (book.tags || "").toString().split(",").map(t => t.trim());
-                        const wanters = householdMembers.filter(m => bookTags.includes(wantToReadTagFor(m)));
-                        subline = `<p class="text-emerald-700 font-medium">Wanted by: <b>${wanters.join(', ') || 'Unknown'}</b></p>`;
+                    item.className = "flex items-center justify-between gap-2 bg-emerald-50/60 p-3 rounded-xl text-xs transition-colors";
+
+                    let subline = `<p class="text-emerald-700 font-medium">by ${wItem.authors || 'Unknown Author'}</p>`;
+                    if (isEveryone && wItem.wanters) {
+                        subline = `<p class="text-emerald-700 font-medium">Wanted by: <b>${wItem.wanters.join(', ') || 'Unknown'}</b></p>`;
                     }
+                    const ownedBadge = wItem.source === "owned"
+                        ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-100 px-1 rounded mt-0.5">In Library</span>`
+                        : `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-gray-500 bg-gray-100 px-1 rounded mt-0.5">Not Owned</span>`;
+
+                    // Reorder + remove controls only make sense in the personal (ranked)
+                    // view — the "everyone" view has no single priority order.
+                    const reorderControlsHTML = !isEveryone ? `
+                        <div class="flex flex-col gap-0.5 shrink-0">
+                            <button onclick="moveWantToReadItem('${wItem.key}', -1)" ${idx === 0 ? 'disabled' : ''} class="w-5 h-5 flex items-center justify-center rounded bg-white text-gray-400 hover:text-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><i data-lucide="chevron-up" class="w-3 h-3"></i></button>
+                            <button onclick="moveWantToReadItem('${wItem.key}', 1)" ${idx === wantToReadItems.length - 1 ? 'disabled' : ''} class="w-5 h-5 flex items-center justify-center rounded bg-white text-gray-400 hover:text-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><i data-lucide="chevron-down" class="w-3 h-3"></i></button>
+                        </div>` : '';
+
+                    const actionButtonHTML = wItem.source === "owned"
+                        ? `<button onclick="manageBookByIsbn('${wItem.isbn}', '${wItem.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-emerald-700 cursor-pointer hover:bg-emerald-50 transition-colors shadow-2xs whitespace-nowrap">Manage</button>`
+                        : `<button onclick="manageBookByIsbn('${wItem.isbn}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-indigo-700 cursor-pointer hover:bg-indigo-50 transition-colors shadow-2xs whitespace-nowrap">Add to Library</button>`;
+
+                    const removeButtonHTML = !isEveryone
+                        ? `<button onclick="removeFromWantToRead('${wItem.isbn}', '${wItem.uniqueId || ''}')" title="Remove from want-to-read" class="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>`
+                        : '';
+
                     item.innerHTML = `
-                        <div>
-                            <p class="font-bold text-gray-900">${book.title}</p>
+                        ${reorderControlsHTML}
+                        <div class="flex-grow min-w-0">
+                            <p class="font-bold text-gray-900 truncate">${!isEveryone ? `#${idx + 1} ` : ''}${wItem.title}</p>
                             ${subline}
+                            ${ownedBadge}
                         </div>
-                        <button onclick="manageBookByIsbn('${book.isbn}', '${book.uniqueId}')" class="text-[10px] bg-white px-2.5 py-1 rounded-full font-bold text-emerald-700 cursor-pointer hover:bg-emerald-50 transition-colors shadow-2xs">Manage</button>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            ${actionButtonHTML}
+                            ${removeButtonHTML}
+                        </div>
                     `;
                     wantToReadContainer.appendChild(item);
                 });
+            }
+        }
+
+        // Called from the up/down buttons on a personal want-to-read entry. Swaps the
+        // item with its neighbor and sends the WHOLE new order back to the backend
+        // (simpler and less error-prone than a single-position move on the server side).
+        async function moveWantToReadItem(key, direction) {
+            const items = buildWantToReadItemsForMember(currentActiveUser);
+            const idx = items.findIndex(i => i.key === key);
+            const targetIdx = idx + direction;
+            if (idx === -1 || targetIdx < 0 || targetIdx >= items.length) return;
+
+            const reordered = items.map(i => i.key);
+            const tmp = reordered[idx];
+            reordered[idx] = reordered[targetIdx];
+            reordered[targetIdx] = tmp;
+
+            wantToReadOrder[currentActiveUser] = reordered;
+            localStorage.setItem("librify_wtr_order", JSON.stringify(wantToReadOrder));
+            renderHomeMemberContent(); // optimistic — reflect the new order immediately
+
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "reorderWantToRead",
+                        token: SHARED_SECRET,
+                        member: currentActiveUser,
+                        orderedKeys: reordered
+                    })
+                });
+            } catch (e) {
+                console.warn("Failed to save want-to-read order:", e.message);
+            }
+        }
+
+        // Called from the "x" button on a personal want-to-read entry. uniqueId present
+        // means it's an owned/tagged book (remove just the tag); otherwise it's a
+        // not-owned WantToRead sheet entry (delete the row).
+        async function removeFromWantToRead(isbn, uniqueId) {
+            if (!currentActiveUser || currentActiveUser === EVERYONE_USER) return;
+
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "removeWantToRead",
+                        token: SHARED_SECRET,
+                        isbn: isbn,
+                        uniqueId: uniqueId || "",
+                        member: currentActiveUser
+                    })
+                });
+                await fetchAllBooksFromGoogleSheet();
+            } catch (e) {
+                console.warn("Failed to remove want-to-read entry:", e.message);
             }
         }
 
@@ -1609,12 +2083,205 @@
                 showStatus(`Successfully updated catalog: "${savedBookInstance.title}"`, "success"); 
                 appendSessionHistoryLog(savedBookInstance); 
                 fetchAllBooksFromGoogleSheet(); 
+
+                // Fire-and-forget: never let a Hardcover hiccup block the local save flow
+                // that just succeeded. Errors are logged to the console, not shown to the
+                // user, since this is a nice-to-have sync, not a core app feature.
+                maybeSyncHardcoverStatus(savedBookInstance, statusValue);
+                syncBookMetadataToHardcover(savedBookInstance);
                 
                 closeBookDetailModal();
             } catch (err) { 
                 showStatus(`Spreadsheet sync error: ${err.message}`, "error"); 
                 renderIntegratedLayout(); 
             } 
+        }
+
+        // Calls the backend's syncHardcoverStatus action, but only when it's actually
+        // worth calling: the Status must have genuinely changed (not just re-saved) to
+        // "Currently Reading" (finishing a book is handled separately, by
+        // markBookAsFinished — see below, since "Read" isn't a Status value here), and —
+        // since Librify tracks multiple physical copies per ISBN while each household
+        // member has one Hardcover reading state per book — this must be the only copy
+        // of this ISBN in that state, so two copies don't fight over what shows up.
+        //
+        // Hardcover sync is per-member: it goes to whichever member is assigned as the
+        // Reader, using their own Hardcover token — never a shared/global one.
+        async function maybeSyncHardcoverStatus(savedBook, newStatus) {
+            if (!isReadingStatus(newStatus)) return; // "Read" handled by markBookAsFinished
+            if (newStatus === statusAtLoad) return; // no real transition, skip
+
+            const otherCopiesInSameState = activeCopiesData.filter(c =>
+                c.uniqueId !== savedBook.uniqueId && isReadingStatus(c.status)
+            );
+            if (otherCopiesInSameState.length > 0) {
+                console.log("Skipping Hardcover sync: another copy of this ISBN is already being read");
+                return;
+            }
+
+            const member = savedBook.reader;
+            if (!member) {
+                console.log("Skipping Hardcover sync: no reader assigned to this copy");
+                return;
+            }
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "syncHardcoverStatus",
+                        token: SHARED_SECRET,
+                        isbn: savedBook.isbn,
+                        status: newStatus,
+                        member: member
+                    })
+                });
+                const resData = await response.json();
+                if (resData.status === "error") {
+                    console.warn("Hardcover sync failed:", resData.message || resData);
+                } else if (resData.status === "skipped") {
+                    console.log("Hardcover sync skipped:", resData.message);
+                } else if (resData.status === "success") {
+                    console.log("Hardcover sync succeeded for", savedBook.title, "->", member);
+                }
+            } catch (err) {
+                console.warn("Hardcover sync request failed:", err.message);
+            }
+        }
+
+        // Fire-and-forget, called after every successful save (regardless of status
+        // changes): syncs owned-copy count (broadcast to every configured member, since
+        // ownership reflects the shared household library) and tags (personal tags to
+        // that member's own Hardcover Lists, shared tags broadcast to everyone).
+        async function syncBookMetadataToHardcover(savedBook) {
+            // Manually-entered books (no real ISBN) can't be matched against Hardcover's
+            // catalog at all — skip rather than send a call guaranteed to fail.
+            if (!savedBook.isbn || savedBook.isbn.toString().startsWith("MANUAL-")) return;
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "syncBookMetadataToHardcover",
+                        token: SHARED_SECRET,
+                        isbn: savedBook.isbn,
+                        tags: savedBook.tags || ""
+                    })
+                });
+                const resData = await response.json();
+                if (resData.status === "error") {
+                    console.warn("Hardcover metadata sync failed:", resData.message || resData);
+                } else if (resData.status === "skipped") {
+                    console.log("Hardcover metadata sync skipped:", resData.message);
+                } else {
+                    console.log("Hardcover metadata sync complete for", savedBook.title, resData);
+                }
+            } catch (err) {
+                console.warn("Hardcover metadata sync request failed:", err.message);
+            }
+        }
+
+        // Called from the "Refresh" button under the cover image on an already-saved
+        // book. Explicitly re-fetches and applies Hardcover's catalog fields (cover,
+        // pages, description, genre, series) — deliberately does NOT touch status,
+        // reader, tags, notes, or location, so this is safe to run any time without
+        // risking your personal edits.
+        async function refreshCurrentBookFromHardcover() {
+            if (!selectedUniqueId) return;
+            showStatus("Refreshing from Hardcover...", "info");
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "refreshFromHardcover",
+                        token: SHARED_SECRET,
+                        uniqueId: selectedUniqueId
+                    })
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    showStatus(`Refresh failed: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+                if (resData.status === "skipped") {
+                    showStatus(`Nothing to refresh — ${resData.message}`, "info");
+                    return;
+                }
+
+                // Pull the freshly-updated row back from the sheet and reload it into the
+                // form, reusing the same pendingSelectUniqueId + renderIntegratedLayout
+                // pattern the rest of the app already uses to select the right copy.
+                const isbn = currentScannedBook.isbn;
+                const lookupResponse = await fetch(`${GOOGLE_SCRIPT_URL}?isbn=${encodeURIComponent(isbn)}&token=${encodeURIComponent(SHARED_SECRET)}`);
+                const lookupData = await lookupResponse.json();
+                activeCopiesData = lookupData.copies || [];
+                pendingSelectUniqueId = selectedUniqueId;
+                renderIntegratedLayout();
+
+                const updatedList = (resData.updatedFields && resData.updatedFields.length > 0) ? resData.updatedFields.join(", ") : "nothing new";
+                showStatus(`Refreshed from Hardcover (${updatedList}).`, "success");
+                fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showStatus(`Refresh error: ${err.message}`, "error");
+            }
+        }
+
+        // Called from the "Mark as Finished" button next to the reader dropdown. Unlike
+        // the Status dropdown, this fires its own dedicated backend action that: tags the
+        // book "<Member>: Read", returns the physical copy to Available for the rest of
+        // the household, logs it to ReadingHistory, and syncs "Read" to that member's own
+        // Hardcover account — all server-side, in one call.
+        async function markBookAsFinished() {
+            if (!currentScannedBook || !selectedUniqueId) return;
+
+            const member = document.getElementById("input-reader").value;
+            if (!member) {
+                showStatus("Select a reader before marking this as finished.", "error");
+                return;
+            }
+
+            const confirmFinish = confirm(`Mark "${currentScannedBook.title}" as finished for ${member}? It will return to Available for the household.`);
+            if (!confirmFinish) return;
+
+            showStatus("Marking as finished...", "info");
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "markBookFinished",
+                        token: SHARED_SECRET,
+                        uniqueId: selectedUniqueId,
+                        member: member
+                    })
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    showStatus(`Could not mark as finished: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+
+                const hc = resData.hardcover;
+                if (hc && hc.status === "success") {
+                    showStatus(`Marked as finished for ${member} — synced to Hardcover.`, "success");
+                } else if (hc && hc.status === "skipped") {
+                    showStatus(`Marked as finished for ${member}. (${hc.message})`, "success");
+                } else {
+                    showStatus(`Marked as finished for ${member}.`, "success");
+                }
+
+                fetchAllBooksFromGoogleSheet();
+                closeBookDetailModal();
+            } catch (err) {
+                showStatus(`Error marking as finished: ${err.message}`, "error");
+            }
         }
 
         async function deleteBookRecord() {
@@ -1755,7 +2422,10 @@
                         const title = vol.title || "Unknown Title";
                         const authors = vol.authors ? vol.authors.join(", ") : "Unknown Author";
                         const year = vol.publishedDate ? (vol.publishedDate.match(/\d{4}/) || ["N/A"])[0] : "N/A";
-                        const sourceBadge = item._source === "openlibrary" ? `<span class="inline-block mt-0.5 text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>` : '';
+                        const sourceBadge = item._source === "openlibrary"
+                            ? `<span class="inline-block mt-0.5 text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded">via Open Library</span>`
+                            : (item._source === "hardcover" ? `<span class="inline-block mt-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded">via Hardcover</span>`
+                            : (item._source === "googlebooks" ? `<span class="inline-block mt-0.5 text-[8px] font-bold uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-200 px-1 rounded">via Google Books</span>` : ''));
         
                         const card = document.createElement("div");
                         card.className = "bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex gap-3 items-center text-left hover:border-indigo-400 cursor-pointer transition-all";
@@ -1913,7 +2583,12 @@
         function selectCandidateBook(item, fallbackIsbn, isAutoMatch = false) {
             const vol = item.volumeInfo || {};
             const identifiers = vol.industryIdentifiers || [];
-            const foundIsbn = identifiers.find(id => id.type === "ISBN_13" || id.type === "ISBN_10")?.identifier || fallbackIsbn || `MANUAL-${Date.now()}`;
+            // Explicitly prefer ISBN_13 over ISBN_10 when a source lists both — Google
+            // Books doesn't guarantee ordering, so a naive "first match" (the old
+            // behavior here) could silently pick the ISBN-10 depending on source order.
+            const isbn13 = identifiers.find(id => id.type === "ISBN_13")?.identifier;
+            const isbn10 = identifiers.find(id => id.type === "ISBN_10")?.identifier;
+            const foundIsbn = isbn13 || isbn10 || fallbackIsbn || `MANUAL-${Date.now()}`;
             
             const fetchedCover = vol.imageLinks && vol.imageLinks.thumbnail 
                 ? vol.imageLinks.thumbnail.replace("http://", "https://") 
@@ -1950,6 +2625,21 @@
             }
             pendingAliasSourceIsbn = null;
 
+            // Want to Read: never creates a Books row at all — show a lightweight
+            // confirm screen (pick who wants it) instead of the full edit form, and
+            // skip Quick Add entirely (that's specific to the physical-add flow).
+            if (addBookIntent === "wantToRead") {
+                showWantToReadConfirm();
+                return;
+            }
+
+            // Library Loan: same idea — never creates a Books row, shows a confirm
+            // screen (reader + library name + due date) instead.
+            if (addBookIntent === "libraryLoan") {
+                showLibraryLoanConfirm();
+                return;
+            }
+
             // Quick Add: only for a confident single-match scan, never for a book the user
             // had to manually pick out of several candidates — that case still needs review.
             if (quickAddMode && isAutoMatch) {
@@ -1957,9 +2647,329 @@
                 return;
             }
             
-            showStatus("Book profile selected!", "success"); 
+            if (foundIsbn.startsWith("MANUAL-")) {
+                showStatus("Book selected, but no real ISBN could be found for this edition — Hardcover sync and some enrichment won't work for it. You can still save it, or try a different candidate/edition.", "info");
+            } else {
+                showStatus("Book profile selected!", "success"); 
+            }
             renderIntegratedLayout(); 
         }
+
+        // Shown instead of the full edit form when addBookIntent === "wantToRead" — just
+        // enough to confirm which household member wants to read this, without ever
+        // creating a Books-sheet row.
+        function showWantToReadConfirm() {
+            const book = currentScannedBook;
+            const noIsbnWarning = book.isbn.startsWith("MANUAL-")
+                ? `<p class="text-[10px] text-amber-600 mt-1">No ISBN found for this edition — it can still be added, but Hardcover sync won't work for it.</p>`
+                : '';
+
+            const defaultMember = (currentActiveUser && currentActiveUser !== EVERYONE_USER && householdMembers.includes(currentActiveUser))
+                ? currentActiveUser : (householdMembers[0] || "");
+            const memberOptionsHTML = householdMembers.map(m =>
+                `<option value="${m}" ${m === defaultMember ? 'selected' : ''}>${m}</option>`
+            ).join("");
+
+            openBookDetailModal();
+            bookResult.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 space-y-4">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-16 h-24 shrink-0 bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-md ring-1 ring-black/5">
+                            <img src="${book.coverImage || FALLBACK_COVER}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-serif font-semibold text-gray-900 text-sm">${book.title}</p>
+                            <p class="text-xs text-gray-500">by ${book.authors}</p>
+                            ${noIsbnWarning}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Who wants to read this?</label>
+                        <select id="wtr-member-select" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs">
+                            ${memberOptionsHTML}
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="confirmAddToWantToRead()" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors cursor-pointer">Add to Want to Read</button>
+                        <button onclick="closeBookDetailModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer">Cancel</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Fires the actual addWantToRead backend call using whatever selectCandidateBook
+        // already populated onto currentScannedBook.
+        async function confirmAddToWantToRead() {
+            const memberSelect = document.getElementById("wtr-member-select");
+            const member = memberSelect ? memberSelect.value : "";
+            if (!member) { showStatus("Select a member first.", "error"); return; }
+
+            const book = currentScannedBook;
+            showStatus("Adding to want-to-read...", "info");
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "addWantToRead",
+                        token: SHARED_SECRET,
+                        isbn: book.isbn,
+                        title: book.title,
+                        authors: book.authors,
+                        coverImage: book.coverImage || book.thumbnail || "",
+                        publisher: book.publisher,
+                        publishedDate: book.publishedDate,
+                        pageCount: book.pageCount,
+                        description: book.description,
+                        categories: book.categories,
+                        seriesName: book.seriesName,
+                        seriesNumber: book.seriesNumber,
+                        member: member
+                    })
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    showStatus(`Could not add to want-to-read: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+
+                showStatus(`Added "${book.title}" to ${member}'s want-to-read list.`, "success");
+                closeBookDetailModal();
+                await fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, "error");
+            }
+        }
+
+        // Shown instead of the full edit form when addBookIntent === "libraryLoan" —
+        // asks who's reading it, plus optional library name and due date. Never creates
+        // a Books-sheet row; posts straight to the LibraryLoans sheet instead.
+        function showLibraryLoanConfirm() {
+            const book = currentScannedBook;
+            const noIsbnWarning = book.isbn.startsWith("MANUAL-")
+                ? `<p class="text-[10px] text-amber-600 mt-1">No ISBN found for this edition — it can still be added, but Hardcover sync won't work for it.</p>`
+                : '';
+
+            const defaultMember = (currentActiveUser && currentActiveUser !== EVERYONE_USER && householdMembers.includes(currentActiveUser))
+                ? currentActiveUser : (householdMembers[0] || "");
+            const memberOptionsHTML = householdMembers.map(m =>
+                `<option value="${m}" ${m === defaultMember ? 'selected' : ''}>${m}</option>`
+            ).join("");
+
+            openBookDetailModal();
+            bookResult.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 space-y-4">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-16 h-24 shrink-0 bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-md ring-1 ring-black/5">
+                            <img src="${book.coverImage || FALLBACK_COVER}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-serif font-semibold text-gray-900 text-sm">${book.title}</p>
+                            <p class="text-xs text-gray-500">by ${book.authors}</p>
+                            ${noIsbnWarning}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Who's reading this?</label>
+                        <select id="ll-member-select" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs">
+                            ${memberOptionsHTML}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Library (optional)</label>
+                        <input type="text" id="ll-libraryname" placeholder="e.g. Springfield Public Library" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Due Back</label>
+                        <input type="date" id="ll-duedate" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs">
+                        <div class="flex gap-1.5 pt-1.5">
+                            <button type="button" onclick="setDueDatePreset(7, 'll-duedate')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">1 Week</button>
+                            <button type="button" onclick="setDueDatePreset(14, 'll-duedate')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">2 Weeks</button>
+                            <button type="button" onclick="setDueDatePreset(21, 'll-duedate')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">3 Weeks</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="confirmAddLibraryLoan()" class="flex-grow bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors cursor-pointer">Add Library Loan</button>
+                        <button onclick="closeBookDetailModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer">Cancel</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function confirmAddLibraryLoan() {
+            const memberSelect = document.getElementById("ll-member-select");
+            const member = memberSelect ? memberSelect.value : "";
+            if (!member) { showStatus("Select a reader first.", "error"); return; }
+
+            const book = currentScannedBook;
+            const libraryName = document.getElementById("ll-libraryname").value;
+            const dueDate = document.getElementById("ll-duedate").value;
+            showStatus("Adding library loan...", "info");
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "addLibraryLoan",
+                        token: SHARED_SECRET,
+                        isbn: book.isbn,
+                        title: book.title,
+                        authors: book.authors,
+                        coverImage: book.coverImage || book.thumbnail || "",
+                        publisher: book.publisher,
+                        publishedDate: book.publishedDate,
+                        pageCount: book.pageCount,
+                        description: book.description,
+                        categories: book.categories,
+                        seriesName: book.seriesName,
+                        seriesNumber: book.seriesNumber,
+                        member: member,
+                        libraryName: libraryName,
+                        dueDate: dueDate
+                    })
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    showStatus(`Could not add library loan: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+
+                showStatus(`Added "${book.title}" as a library loan for ${member}.`, "success");
+                closeBookDetailModal();
+                await fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, "error");
+            }
+        }
+
+        // Library loans aren't Books-sheet rows, so they don't go through the normal
+        // book detail modal — this is a lightweight equivalent, reusing the same modal
+        // shell (bookResult) for editing library name/due date, marking finished, or
+        // removing the loan entirely.
+        function manageLibraryLoan(uniqueId) {
+            const loan = libraryLoansCache.find(l => l.uniqueId === uniqueId);
+            if (!loan) { showStatus("Could not find that library loan.", "error"); return; }
+
+            openBookDetailModal();
+            bookResult.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 space-y-4">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-16 h-24 shrink-0 bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-md ring-1 ring-black/5">
+                            <img src="${loan.coverImage || FALLBACK_COVER}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-serif font-semibold text-gray-900 text-sm">${loan.title}</p>
+                            <p class="text-xs text-gray-500">by ${loan.authors}</p>
+                            <p class="text-[10px] text-purple-600 font-semibold mt-1">Reader: ${loan.reader}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Library (optional)</label>
+                        <input type="text" id="ll-edit-libraryname" value="${loan.libraryName || ''}" placeholder="e.g. Springfield Public Library" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Due Back</label>
+                        <input type="date" id="ll-edit-duedate" value="${loan.dueDate || ''}" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs">
+                        <div class="flex gap-1.5 pt-1.5">
+                            <button type="button" onclick="setDueDatePreset(7, 'll-edit-duedate')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">1 Week</button>
+                            <button type="button" onclick="setDueDatePreset(14, 'll-edit-duedate')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">2 Weeks</button>
+                            <button type="button" onclick="setDueDatePreset(21, 'll-edit-duedate')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold py-1 rounded-lg cursor-pointer">3 Weeks</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveLibraryLoanEdits('${uniqueId}')" class="flex-grow bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl text-xs transition-colors cursor-pointer">Save Changes</button>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-gray-100">
+                        <button onclick="finishLibraryLoan('${uniqueId}')" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Mark as Finished</span>
+                        </button>
+                        <button onclick="deleteLibraryLoan('${uniqueId}')" title="Remove without marking finished" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold px-4 py-2.5 rounded-xl text-xs transition-colors cursor-pointer">Remove</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function saveLibraryLoanEdits(uniqueId) {
+            const libraryName = document.getElementById("ll-edit-libraryname").value;
+            const dueDate = document.getElementById("ll-edit-duedate").value;
+            showStatus("Saving...", "info");
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: "updateLibraryLoan", token: SHARED_SECRET, uniqueId: uniqueId, libraryName: libraryName, dueDate: dueDate })
+                });
+                const resData = await response.json();
+                if (resData.status === "error") {
+                    showStatus(`Could not save: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+                showStatus("Library loan updated.", "success");
+                closeBookDetailModal();
+                await fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, "error");
+            }
+        }
+
+        // Marks a library loan finished: logs it to LibraryLoanHistory (with days-to-
+        // finish), removes it from the active list, syncs "Read" to the reader's
+        // Hardcover account. This is the fix for the old behavior where finishing a
+        // library loan just silently deleted it with no record at all.
+        async function finishLibraryLoan(uniqueId) {
+            const confirmFinish = confirm("Mark this library loan as finished? It'll move to your loan history.");
+            if (!confirmFinish) return;
+
+            showStatus("Marking as finished...", "info");
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: "markLibraryLoanFinished", token: SHARED_SECRET, uniqueId: uniqueId })
+                });
+                const resData = await response.json();
+                if (resData.status === "error") {
+                    showStatus(`Could not mark as finished: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+                showStatus("Marked as finished — moved to your loan history.", "success");
+                closeBookDetailModal();
+                await fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, "error");
+            }
+        }
+
+        // Removes a loan WITHOUT marking it finished (added by mistake, returned
+        // unread, etc.) — no history entry, unlike finishLibraryLoan above.
+        async function deleteLibraryLoan(uniqueId) {
+            const confirmDelete = confirm("Remove this library loan? This won't log it to your history — use \"Mark as Finished\" instead if you read it.");
+            if (!confirmDelete) return;
+
+            showStatus("Removing...", "info");
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: "removeLibraryLoan", token: SHARED_SECRET, uniqueId: uniqueId })
+                });
+                const resData = await response.json();
+                if (resData.status === "error") {
+                    showStatus(`Could not remove: ${resData.message || "Unknown error"}`, "error");
+                    return;
+                }
+                showStatus("Library loan removed.", "success");
+                closeBookDetailModal();
+                await fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, "error");
+            }
+        }
+
         
         isbnInput.addEventListener("keyup", function(e) { if (e.key === "Enter") { const q = isbnInput.value.trim(); if (q) checkExistingAndFetchMetadata(q); } });
 
@@ -2078,6 +3088,57 @@
             link.click();
             document.body.removeChild(link);
         }
+
+        // One-time, on-demand import of a member's existing Hardcover data — mainly
+        // for onboarding someone new to the household library so they don't start from
+        // zero. Deliberately manual (button press), not a background sync — see the
+        // earlier discussion about why continuous bidirectional sync is risky.
+        async function runHardcoverImport() {
+            const member = document.getElementById("hardcover-import-member-select").value;
+            const importWantToRead = document.getElementById("hardcover-import-wtr").checked;
+            const importRead = document.getElementById("hardcover-import-read").checked;
+            const resultEl = document.getElementById("hardcover-import-result");
+            const button = document.getElementById("hardcover-import-button");
+
+            if (!member) { resultEl.innerHTML = `<span class="text-red-600">Select a member first.</span>`; return; }
+            if (!importWantToRead && !importRead) { resultEl.innerHTML = `<span class="text-red-600">Select at least one thing to import.</span>`; return; }
+
+            button.disabled = true;
+            button.classList.add("opacity-60", "cursor-not-allowed");
+            resultEl.innerHTML = `<span class="text-gray-500"><i data-lucide="loader" class="w-3 h-3 inline animate-spin"></i> Importing from Hardcover — this can take a little while for a large library...</span>`;
+
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "importFromHardcover",
+                        token: SHARED_SECRET,
+                        member: member,
+                        importWantToRead: importWantToRead,
+                        importRead: importRead
+                    })
+                });
+                const resData = await response.json();
+
+                if (resData.status === "error") {
+                    resultEl.innerHTML = `<span class="text-red-600">Import failed: ${resData.message || "Unknown error"}</span>`;
+                    return;
+                }
+
+                const wtrCount = resData.wantToReadImported || 0;
+                const readCount = resData.readImported || 0;
+                const wtrSkipped = resData.wantToReadSkipped || 0;
+                const readSkipped = resData.readSkipped || 0;
+                resultEl.innerHTML = `<span class="text-emerald-600">Imported ${wtrCount} want-to-read book(s) and ${readCount} read book(s) for ${member}.${(wtrSkipped + readSkipped) > 0 ? ` (${wtrSkipped + readSkipped} already present, skipped.)` : ''}</span>`;
+                await fetchAllBooksFromGoogleSheet();
+            } catch (err) {
+                resultEl.innerHTML = `<span class="text-red-600">Error: ${err.message}</span>`;
+            } finally {
+                button.disabled = false;
+                button.classList.remove("opacity-60", "cursor-not-allowed");
+            }
+        }
         
         function toggleAppSettingsPanel(id) { 
             const el = document.getElementById(id); 
@@ -2087,7 +3148,7 @@
         }
 
         function switchSettingsSubTab(tab) {
-            const tabs = ['members', 'locations', 'tags', 'borrowers', 'data'];
+            const tabs = ['members', 'locations', 'tags', 'borrowers', 'data', 'hardcover'];
             const activeClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full bg-indigo-600 text-white cursor-pointer transition-all flex items-center justify-center gap-1";
             const inactiveClass = "flex-1 text-center py-1.5 text-[11px] font-bold rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer transition-all flex items-center justify-center gap-1";
 
@@ -2110,7 +3171,14 @@
             });
             renderTagOwnerSelectOptions();
             renderActiveUserSelectOptions();
+            renderHardcoverImportMemberOptions();
             updateActiveUserButton();
+        }
+
+        function renderHardcoverImportMemberOptions() {
+            const select = document.getElementById("hardcover-import-member-select");
+            if (!select) return;
+            select.innerHTML = householdMembers.map(m => `<option value="${m}">${m}</option>`).join("");
         }
 
         // Cycles a small set of palette colors across household members so each gets a
@@ -2712,6 +3780,7 @@
             pendingSelectUniqueId = null;
             pendingAliasSourceIsbn = null;
             isbnInput.value = "";
+            addBookIntent = "physical";
         }
 
         function openAddBookModal() {
@@ -2770,12 +3839,35 @@
             closeFabMenu();
 
             if (action === "manual") {
+                addBookIntent = "physical";
                 openManualBookModal();
                 return;
             }
 
+            addBookIntent = (action === "wanttoread") ? "wantToRead" : (action === "libraryloan") ? "libraryLoan" : "physical";
+
             openAddBookModal();
-            setAddBookModalMode(action);
+            setAddBookModalMode((action === "wanttoread" || action === "libraryloan") ? "lookup" : action);
+
+            if (action === "wanttoread") {
+                quickAddMode = false;
+                isbnInput.placeholder = "Search for a book to add to a want-to-read list...";
+                isbnInput.focus();
+                const titleEl = document.getElementById("add-book-modal-title");
+                const titleSpan = titleEl.querySelector("span");
+                if (titleSpan) titleSpan.innerText = "Add to Want to Read";
+                return;
+            }
+
+            if (action === "libraryloan") {
+                quickAddMode = false;
+                isbnInput.placeholder = "Search for a book you've borrowed from the library...";
+                isbnInput.focus();
+                const titleEl = document.getElementById("add-book-modal-title");
+                const titleSpan = titleEl.querySelector("span");
+                if (titleSpan) titleSpan.innerText = "Add Library Loan";
+                return;
+            }
 
             if (action === "lookup") {
                 quickAddMode = false;
@@ -3068,11 +4160,17 @@
             bookResult.innerHTML = `
                 ${overdueBannerHTML}
                 <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 flex flex-row gap-4 sm:gap-6 items-start">
-                    <div class="w-24 h-36 sm:w-32 sm:h-44 shrink-0 bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-md ring-1 ring-black/5">
-                        <img id="book-cover-img" src="${coverUrl}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
+                    <div class="w-24 h-36 sm:w-32 sm:h-44 shrink-0 space-y-1.5">
+                        <div class="bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl overflow-hidden shadow-md ring-1 ring-black/5 w-full h-36 sm:h-44">
+                            <img id="book-cover-img" src="${coverUrl}" class="w-full h-full object-cover" onerror="this.src='${FALLBACK_COVER}'">
+                        </div>
+                        ${activeCopiesData.length > 0 ? `
+                        <button type="button" onclick="refreshCurrentBookFromHardcover()" title="Re-fetch cover, pages, description, genre, and series from Hardcover" class="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-500 hover:text-indigo-600 text-[9px] font-semibold py-1 rounded-lg cursor-pointer transition-colors flex items-center justify-center gap-1">
+                            <i data-lucide="refresh-cw" class="w-2.5 h-2.5 shrink-0"></i><span class="leading-none">Refresh</span>
+                        </button>` : ''}
                     </div>
                     <div class="space-y-2 flex-grow min-w-0 text-left">
-                        ${currentScannedBook.dataSource === "openlibrary" ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full">via Open Library</span>` : ''}
+                        ${currentScannedBook.dataSource === "openlibrary" ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full">via Open Library</span>` : (currentScannedBook.dataSource === "hardcover" ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">via Hardcover</span>` : (currentScannedBook.dataSource === "googlebooks" ? `<span class="inline-block text-[8px] font-bold uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full">via Google Books</span>` : ''))}
                         <div>
                             <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">Title${missingBadge(currentScannedBook.title)}</label>
                             <input type="text" id="input-title" class="w-full text-base sm:text-xl font-serif font-semibold text-gray-900 bg-transparent border-b-2 ${isMissingValue(currentScannedBook.title) ? 'border-amber-300' : 'border-transparent'} focus:border-indigo-400 focus:outline-none py-0.5">
@@ -3140,6 +4238,10 @@
                         <div id="reader-input-container" class="hidden space-y-1">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase">Assigned Reader</label>
                             <select id="input-reader" class="w-full bg-white border-0 rounded-lg p-2 text-xs font-medium"></select>
+
+                            <button type="button" onclick="markBookAsFinished()" class="w-full mt-1 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-700 font-semibold text-xs py-2 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-1.5">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5 shrink-0"></i><span class="leading-none">Mark as Finished</span>
+                            </button>
                         </div>
 
                         <div id="borrower-input-container" class="hidden space-y-2">
@@ -3207,13 +4309,13 @@
             document.getElementById("input-description").value = isMissingValue(currentScannedBook.description) ? "" : currentScannedBook.description;
         }
         
-        function setDueDatePreset(days) {
+        function setDueDatePreset(days, targetFieldId = "input-duedate") {
             const target = new Date();
             target.setDate(target.getDate() + days);
             const yyyy = target.getFullYear();
             const mm = String(target.getMonth() + 1).padStart(2, '0');
             const dd = String(target.getDate()).padStart(2, '0');
-            document.getElementById("input-duedate").value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById(targetFieldId).value = `${yyyy}-${mm}-${dd}`;
         }
 
         function toggleStatusDependentFields() {
@@ -3283,6 +4385,7 @@
         function loadSelectedCopyProfile(i) { 
             const c = activeCopiesData[i]; 
             selectedUniqueId = c.uniqueId; 
+            statusAtLoad = c.status || "Available";
 
             const cbl = document.getElementById("copy-buttons-list");
             if (cbl) {
@@ -3333,6 +4436,7 @@
             });
             const ni = (usedSuffixes.length > 0 ? Math.max(...usedSuffixes) : 0) + 1;
             selectedUniqueId = `${currentScannedBook.isbn}-${ni}`; 
+            statusAtLoad = "Available";
             document.getElementById("copy-badge-indicator").innerText = `Staging New: Copy ${ni}`; 
             const bl = document.getElementById("copy-buttons-list").children; 
             Array.from(bl).forEach((b, idx) => { 
