@@ -3108,6 +3108,8 @@
 
             let offset = 0;
             let totalWtrImported = 0, totalWtrSkipped = 0, totalReadImported = 0, totalReadSkipped = 0;
+            let totalNoIsbnSkipped = 0;
+            let allNoIsbnTitles = [];
             let page = 0;
             let lastPartialErrors = null;
             let lastFetchedCount = 0;
@@ -3141,6 +3143,10 @@
                     totalWtrSkipped += resData.wantToReadSkipped || 0;
                     totalReadImported += resData.readImported || 0;
                     totalReadSkipped += resData.readSkipped || 0;
+                    totalNoIsbnSkipped += resData.noIsbnSkipped || 0;
+                    if (resData.noIsbnTitles && resData.noIsbnTitles.length > 0) {
+                        allNoIsbnTitles = allNoIsbnTitles.concat(resData.noIsbnTitles);
+                    }
                     lastFetchedCount = resData.fetchedCount || 0;
                     if (resData.partialErrors) {
                         lastPartialErrors = resData.partialErrors;
@@ -3155,7 +3161,10 @@
                 const warningHTML = lastPartialErrors
                     ? `<div class="text-amber-600 mt-1">Warning: Hardcover reported partial errors on the last batch (fetched ${lastFetchedCount} of a requested 40) — this may mean the stop was due to a data issue, not because there's nothing left. Check the browser console for details, or try re-running the import.</div>`
                     : '';
-                resultEl.innerHTML = `<span class="text-emerald-600">Imported ${totalWtrImported} want-to-read book(s) and ${totalReadImported} read entr${totalReadImported === 1 ? 'y' : 'ies'} for ${member}.${totalSkipped > 0 ? ` (${totalSkipped} already present, skipped.)` : ''}</span>${warningHTML}`;
+                const noIsbnHTML = totalNoIsbnSkipped > 0
+                    ? `<div class="text-gray-500 mt-1">${totalNoIsbnSkipped} book(s) couldn't be imported — no ISBN available from Hardcover for that edition.${allNoIsbnTitles.length > 0 ? ` Examples: ${allNoIsbnTitles.slice(0, 5).join(', ')}${allNoIsbnTitles.length > 5 ? ', ...' : ''}` : ''}</div>`
+                    : '';
+                resultEl.innerHTML = `<span class="text-emerald-600">Imported ${totalWtrImported} want-to-read book(s) and ${totalReadImported} read entr${totalReadImported === 1 ? 'y' : 'ies'} for ${member}.${totalSkipped > 0 ? ` (${totalSkipped} already present, skipped.)` : ''}</span>${warningHTML}${noIsbnHTML}`;
                 await fetchAllBooksFromGoogleSheet();
             } catch (err) {
                 resultEl.innerHTML = `<span class="text-red-600">Error: ${err.message}${(totalWtrImported + totalReadImported) > 0 ? ` — ${totalWtrImported + totalReadImported} book(s) from earlier batches were still saved.` : ''}</span>`;
